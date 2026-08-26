@@ -1,0 +1,15 @@
+# ComplexWoundDB -> unified 7-class tissue schema (training/arrange_tissue.py)
+#
+# ComplexWoundDB (recogna-lab) labels in-the-wild wounds with five tissue
+# categories: background, granulation, slough/fibrin, necrotic (eschar), and a
+# peri-wound / maceration class that is NOT a wound-bed tissue and folds to
+# background. Only 27 images — a pilot signal, not a class the model can lean on.
+# CONFIRM the native encoding against mapping_report.json before training.
+mode: grayscale
+unmapped: error
+map:
+  0: background
+  1: granulation
+  2: slough
+  3: eschar
+  4: background   # peri-wound / maceration (off wound-bed)

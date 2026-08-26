@@ -1,0 +1,30 @@
+# nnU-Net v2 — offline ACCURACY-CEILING reference (NOT the shipping model)
+#
+# This file is documentation, not an input to training/train_seg.py. nnU-Net
+# self-configures its own preprocessing/patching/TTA/ensembling pipeline, which a
+# naked ONNX graph export cannot reproduce — so nnU-Net is used to establish an
+# accuracy ceiling, while the SegFormer/U-Net++ student (seg_segformer.yaml) is
+# the model you actually export to ONNX-CPU.
+#
+# Install and run separately:
+#   pip install nnunetv2
+#   export nnUNet_raw=... nnUNet_preprocessed=... nnUNet_results=...
+#   # Convert the AZH/FUSeg pairs into a Dataset0XX_Wound/ folder in nnU-Net's
+#   # raw format (imagesTr/, labelsTr/, dataset.json) — one label channel,
+#   # background=0, wound=1.
+#   nnUNetv2_plan_and_preprocess -d 0XX --verify_dataset_integrity
+#   # ResEnc-L is the documented default preset and targets ~24 GB VRAM,
+#   # comfortable on one ~40 GB MIG slice:
+#   nnUNetv2_train 0XX 2d all -p nnUNetResEncUNetLPlans
+#
+# Reference (verified): "nnU-Net Revisited", arXiv:2404.09556 (2024);
+# MIC-DKFZ ResEnc presets documentation.
+
+reference_only: true
+preset: nnUNetResEncUNetLPlans
+configuration: "2d"
+target_vram_gb: 24
+onnx_exportable: false
+note: >
+  Use nnU-Net offline to bound achievable Dice. Ship the SegFormer/U-Net++
+  student instead; its ONNX graph runs on CPU where nnU-Net's pipeline cannot.

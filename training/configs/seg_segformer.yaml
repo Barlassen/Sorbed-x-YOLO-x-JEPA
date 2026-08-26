@@ -1,0 +1,42 @@
+# Segmentation — SegFormer / MiT-b3 recipe (training/train_seg.py)
+#
+# The pragmatic winner for a 2D RGB wound pipeline that must ship to ONNX-CPU:
+# SMP SegFormer with a MiT-b3 encoder at 768 px. Trains comfortably on one
+# ~40 GB H200 MIG slice; exports to a clean static ONNX graph.
+#
+# DATA (open, permissively usable — no manual gating):
+#   AZH Chronic Wound + FUSeg 2021 foot-ulcer masks from
+#   github.com/uwm-bigdata/wound-segmentation. Fetch with:
+#     python scripts/fetch_fuseg.py --out data/fuseg --split train
+#     python scripts/fetch_fuseg.py --out data/fuseg --split validation
+#   Then point --images/--masks at data/fuseg/train/images and .../labels.
+#   These are foot-only and carry no severity grade — see the datasets audit.
+#
+# PATIENT-LEVEL CV (optional): supply a CSV 'stem,patient_id' via
+#   --patient-manifest to run grouped K-fold; otherwise a seeded random
+#   hold-out (val_fraction) is used.
+
+arch: segformer
+encoder: mit_b3
+encoder_weights: imagenet   # 'none' to train from scratch / run fully offline
+decoder_attention: none     # 'scse' is honored only by the U-Net family
+num_classes: 1              # 1 = binary wound mask; >1 = multiclass tissue seg
+
+input_size: 768
+epochs: 60
+batch_size: 8               # ~14-20 GB at 768 px, AMP on; drop to 4 for 1024 px
+lr: 6.0e-5
+weight_decay: 0.01
+warmup_epochs: 3
+
+val_fraction: 0.2
+folds: 5
+fold: 0
+
+num_workers: 8
+amp: true
+grad_checkpointing: false   # MiT has no ckpt hook; control memory via batch size
+seed: 1234
+device: auto
+export_onnx: true
+out_dir: artifacts/seg_segformer

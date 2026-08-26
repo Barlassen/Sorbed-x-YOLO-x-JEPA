@@ -1,0 +1,59 @@
+# Teacher-student staging — directive teacher + student SSL
+# (training/teacher_student.py)
+#
+# Combines three signals into a ConvNeXt-V2 grade student:
+#   1. lambda_sup  — real expert labels (DOMINANT; from --labeled-manifest).
+#   2. lambda_kd   — KL distillation from the deterministic DirectiveTeacher's
+#                    soft targets on NON-ABSTAINED unlabeled images.
+#   3. lambda_cons / lambda_fixmatch — EMA mean-teacher consistency (+ optional
+#                    FixMatch) on the unlabeled pool.
+#
+# DATA:
+#   --unlabeled-images  a directory of wound photos (no labels needed).
+#   --unlabeled-masks   OPTIONAL wound masks (pair by file stem). Strongly
+#                       recommended: pre-mask the pool with your trained
+#                       segmenter (train_seg → ONNX → infer) or SAM2/MedSAM2 so
+#                       the teacher's tissue fractions are computed on the wound
+#                       bed, not the whole frame. Without masks the teacher falls
+#                       back to a full-frame mask (noisier; more abstentions).
+#   --labeled-manifest  OPTIONAL expert-labeled CSV (see grade_convnextv2.yaml).
+#   --val-manifest      OPTIONAL labeled val CSV; enables QWK monitoring +
+#                       best-checkpoint selection on the EMA student.
+#
+# DIRECTIVE / CLINICAL SIGN-OFF (mandatory before generating any pseudo-label):
+#   The teacher encodes the NPIAP/EPUAP 2019 staging SCHEMA, not the literal
+#   HD_T86 numeric thresholds (the directive is Turkish prose). A wound-care
+#   physician must reconcile obscure_tau/structure_tau/margin_delta etc. against
+#   the real HD_T86 sections and sign off. The classical colour bootstrap cannot
+#   see exposed adipose/muscle/bone, so Stage 3/4 gates stay closed unless a
+#   learned tissue head supplies structure/adipose fractions — the teacher
+#   abstains rather than fabricate a depth-dependent grade.
+#   Citations are attached automatically from var/directive_packs/hd_t86 when
+#   present (topic keys stage.stage_1 … stage.unstageable).
+
+model_name: convnextv2_base.fcmae_ft_in22k_in1k_384
+pretrained: true
+
+input_size: 384
+epochs: 40
+batch_size: 16             # unlabeled batch
+labeled_batch_size: 8      # labeled batch (cycled alongside)
+lr: 1.0e-4
+weight_decay: 0.05
+warmup_epochs: 3
+
+lambda_sup: 1.0
+lambda_kd: 0.5
+lambda_cons: 0.3
+lambda_fixmatch: 0.0       # raise (e.g. 0.5) to add FixMatch pseudo-labeling
+temperature: 2.0
+fixmatch_threshold: 0.95
+ema_decay: 0.999
+
+num_workers: 8
+amp: true
+grad_checkpointing: false
+seed: 1234
+device: auto
+export_onnx: true
+out_dir: artifacts/student

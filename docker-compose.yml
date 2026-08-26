@@ -1,0 +1,30 @@
+services:
+  sorbed-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: sorbed-api:latest
+    container_name: sorbed-api
+    ports:
+      - "8000:8000"
+    environment:
+      # Pipeline configuration (SORBED_*).
+      SORBED_OUTPUT_DIR: /data/reports
+      # Transport configuration (SORBED_API_*).
+      SORBED_API_MAX_UPLOAD_BYTES: "26214400"  # 25 MiB
+      SORBED_API_CORS_ORIGINS: '["*"]'
+    volumes:
+      # Optional directory for learned model weights, mounted read-only.
+      - ./models:/models:ro
+      # Persist any explicitly written reports outside the container.
+      - sorbed-reports:/data/reports
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  sorbed-reports:

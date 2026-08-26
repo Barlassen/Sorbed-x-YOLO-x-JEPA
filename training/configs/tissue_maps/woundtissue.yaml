@@ -1,0 +1,16 @@
+# WoundTissue-147 -> unified 7-class tissue schema (training/arrange_tissue.py)
+#
+# WoundTissue (arXiv:2502.10652) labels six tissue types including bone/tendon
+# (a depth axis). The mapping folds them onto the unified classes; bone and
+# tendon both become deep_structure (HD_T86 Evre 4). CONFIRM the native indices
+# against mapping_report.json — several tissue sets ship RGB rather than
+# grayscale masks; switch `mode: rgb` and key on "R,G,B" if so.
+mode: grayscale
+unmapped: error
+map:
+  0: background
+  1: granulation
+  2: slough
+  3: eschar
+  4: deep_structure   # tendon
+  5: deep_structure   # bone

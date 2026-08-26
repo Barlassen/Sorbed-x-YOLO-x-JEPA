@@ -1,0 +1,112 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Testing / coverage
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+htmlcov/
+
+# Type checkers / linters
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+.ruff_cache/
+
+# Jupyter
+.ipynb_checkpoints
+*.ipynb_checkpoints/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Sorbed: model weights and downloaded assets (never commit large binaries)
+models/weights/
+*.pt
+*.pth
+*.onnx
+*.ckpt
+*.safetensors
+!tests/**/fixtures/**/*.onnx
+# Published release weights are committed via Git LFS (see .gitattributes).
+!models/release/
+!models/release/**/*.onnx
+!models/release/**/*.pt
+
+# Sorbed: runtime artifacts and PHI-risk data (NEVER commit patient images)
+data/
+!data/.gitkeep
+outputs/
+runs/
+*.log
+.sorbed_cache/
+
+# Sorbed: generated reports
+reports/
+!reports/.gitkeep
+
+# Local config overrides
+sorbed.local.toml
+.secrets
+var/
+
+# --- Sorbed-x-YOLO-x-JEPA: data, model weights, training outputs (not source) ---
+/data/
+/runs/
+/runs_jepa/
+/runs_smoke/
+*.pt
+*.onnx
+# generated figures & scratch outputs (repo root)
+/*.png
+/*.jpg
+/scratch_*/
+/out_*/
+/cmp_*/

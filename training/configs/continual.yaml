@@ -1,0 +1,81 @@
+# Continual (human-in-the-loop) fine-tune — training/continual.py
+#
+# This round consumes the JOINED training manifest exported by the runtime
+# feedback store (`sorbed feedback export`) and folds a small batch of human
+# corrections into the deployed ConvNeXt-V2 grader without forgetting the
+# distilled base. It is a SECOND teacher on top of the rule teacher: nurse/HQ
+# corrections outrank rule-teacher soft labels (see `source_weights`).
+#
+# INPUT MANIFESTS (CSV, columns exactly):
+#     image,mask,stage,patient_id,sample_weight,source
+#   * image        — path to the analysed photo (abs, or relative to the CSV).
+#   * mask         — path to the 0/255 mask PNG, or empty for grade-only rows.
+#   * stage        — one of stage_1, stage_2, stage_3, stage_4, unstageable,
+#                    deep_tissue_injury (the human's corrected stage if the human
+#                    disagreed, else the model's predicted stage).
+#   * patient_id   — pseudonymous group id (keeps a patient out of both splits).
+#   * sample_weight— weight emitted by the export step (HQ/physician > nurse >
+#                    rule). Honoured directly when `respect_manifest_weight`.
+#   * source       — "human"/"hq"/"nurse"/"physician" (a correction/confirmation)
+#                    or "rule" (a rule-teacher soft label). Only human-sourced
+#                    rows are appended to the replay buffer on promotion.
+#
+#   --manifest         the NEW rows harvested since the last round (required).
+#   --replay-manifest  previously-confirmed rows, anti-forgetting buffer. The
+#                      same file is APPENDED with this round's confirmed rows
+#                      when (and only when) the candidate is promoted.
+#   --holdout-manifest a FROZEN, versioned hold-out that never enters training;
+#                      the promotion gate is decided on it (required).
+
+# --- base checkpoint to warm-start from (the currently-promoted student) ------
+base_ckpt: artifacts/grade_convnextv2/best.pt   # torch .pt with model_state/ema_state
+base_seg_ckpt: null                             # optional segmenter base (.pt)
+
+# --- model (must match the base checkpoint) -----------------------------------
+model_name: convnextv2_base.fcmae_ft_in22k_in1k_384
+pretrained: true          # ignored when base_ckpt provides weights; set false offline
+input_size: 384
+
+# --- optimisation: small LR + few epochs (fine-tune, do not relearn) ----------
+lr: 2.0e-5                 # deliberately tiny: nudge, never overwrite the base
+weight_decay: 0.05
+epochs: 4
+warmup_epochs: 1
+batch_size: 16
+ema_decay: 0.999          # EMA student is the artifact that gets gated + deployed
+num_workers: 4
+amp: true
+seed: 1234
+device: auto
+
+# --- replay buffer (resist catastrophic forgetting) ---------------------------
+replay_ratio: 2.0         # up to this many replay rows per new row
+replay_size: 4000         # hard cap on replay rows drawn into a round
+max_class_fraction: 0.35  # no single stage may exceed this share of the round
+
+# --- sample weighting: human corrections dominate the rule teacher ------------
+respect_manifest_weight: true   # use the CSV sample_weight when > 0
+source_weights:                 # fallback / multiplier by source when no weight
+  hq: 3.0
+  physician: 3.0
+  human: 2.0
+  nurse: 1.5
+  rule: 1.0
+
+# --- promotion gate: refuse to deploy a regression ----------------------------
+# The candidate must NOT drop balanced accuracy or QWK below the incumbent (the
+# base checkpoint) beyond tolerance, and must NOT worsen calibration (ECE).
+bacc_tolerance: 0.02
+qwk_tolerance: 0.02
+ece_tolerance: 0.01
+seg_dice_tolerance: 0.02
+
+# --- optional joint segmenter fine-tune (rows that carry a mask) --------------
+train_segmenter: false
+seg_arch: segformer
+seg_encoder: mit_b3
+seg_epochs: 4
+seg_lr: 1.0e-5
+
+export_onnx: true
+out_dir: artifacts/continual

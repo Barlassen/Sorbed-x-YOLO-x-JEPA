@@ -1,0 +1,48 @@
+# Stage grading — ConvNeXt-V2 recipe (training/train_grade.py)
+#
+# ConvNeXt-V2-Base (FCMAE + IN22k→IN1k, 384 px) fine-tuned for NPIAP stage
+# classification. Pure conv → exports and INT8-quantizes cleanly for CPU, and
+# beats same-budget ViTs on small/imbalanced medical sets.
+#
+# DATA — REQUIRES A MANUAL STEP (no open, licensed, staged photo set exists):
+#   Build a manifest CSV yourself with columns:
+#     image,stage,patient_id[,skin_tone,site]
+#   where 'stage' is one of: stage_1, stage_2, stage_3, stage_4,
+#   unstageable, deep_tissue_injury.
+#   Candidate sources (obtain manually, mind the licenses):
+#     * PIID  — github.com/FU-MedicalAI/PIID (Stage 1-4, whole-image labels, no
+#               masks, NO stated license → research only). Only open NPIAP set.
+#     * DFUC 2021 — infection/ischaemia patch labels, GATED behind a data-use
+#               agreement (dfu-challenge.github.io). Not NPIAP stages; use only
+#               if you remap to your own label schema.
+#   'patient_id' MUST group all images of one patient so grouped K-fold keeps a
+#   patient out of both train and val (the most common fatal leakage).
+#
+# LOSS:
+#   focal  — class-balanced focal CE over all 6 photo-stageable classes (default)
+#   ce     — class-weighted cross-entropy
+#   corn   — ordinal CORN over Stages 1-4 ONLY (manifest must exclude
+#            Unstageable/DTI rows). Best weighted-kappa on the ordered axis.
+
+model_name: convnextv2_base.fcmae_ft_in22k_in1k_384
+pretrained: true
+loss: focal
+
+input_size: 384
+epochs: 50
+batch_size: 24              # ~12-18 GB at 384 px, AMP on
+lr: 2.0e-4
+weight_decay: 0.05
+warmup_epochs: 3
+drop_path: 0.1
+
+folds: 5
+fold: 0
+
+num_workers: 8
+amp: true
+grad_checkpointing: false   # enable for convnextv2_large or larger input sizes
+seed: 1234
+device: auto
+export_onnx: true
+out_dir: artifacts/grade_convnextv2

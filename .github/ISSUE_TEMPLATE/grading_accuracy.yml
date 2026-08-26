@@ -1,0 +1,78 @@
+name: 🩺 Grading / measurement accuracy concern
+description: Sorbed produced a stage, mask, or measurement that a clinician disagrees with.
+title: "[clinical]: "
+labels: ["clinical-accuracy", "needs-clinical-review", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This template routes to clinical review. Accurate, honest reports here
+        directly improve patient safety.
+
+        ⚠️ **Never attach identifiable patient images or data.** Crop, blur, or
+        synthesize. Describe the case instead if you cannot share a safe image.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Pre-flight checks
+      options:
+        - label: The image I reference is synthetic or fully de-identified (no face, tattoo, jewelry, background, or metadata that could identify a person).
+          required: true
+        - label: I understand Sorbed is decision-support and its output is expected to be reviewed by a clinician.
+          required: true
+  - type: dropdown
+    id: concern-type
+    attributes:
+      label: What was inaccurate?
+      multiple: true
+      options:
+        - Assigned stage was wrong
+        - Wound boundary mask was wrong
+        - Tissue-type classification was wrong (granulation/slough/eschar/etc.)
+        - Area / length / width measurement was wrong
+        - Confidence or explanation did not match the evidence
+        - Skin-tone-related miss (early stage / DTPI not detected)
+    validations:
+      required: true
+  - type: input
+    id: predicted
+    attributes:
+      label: Stage/label Sorbed reported
+      placeholder: "Stage 2, confidence 0.71"
+    validations:
+      required: true
+  - type: input
+    id: expected
+    attributes:
+      label: Clinically correct stage/label
+      placeholder: "Deep Tissue Pressure Injury"
+    validations:
+      required: true
+  - type: textarea
+    id: explanation
+    attributes:
+      label: Sorbed's explanation / evidence trace
+      description: Paste the `explanation` block from the JSON report so we can see which metrics drove the decision.
+      render: json
+  - type: dropdown
+    id: skin-tone
+    attributes:
+      label: Approximate skin tone (Fitzpatrick), if relevant
+      description: Optional, but critical for tracking equity of performance.
+      options:
+        - "Not applicable / prefer not to say"
+        - "I-II (light)"
+        - "III-IV (medium)"
+        - "V-VI (dark)"
+  - type: textarea
+    id: context
+    attributes:
+      label: Clinical context & reasoning
+      description: Why is the reported result wrong? What features should have driven a different grade?
+    validations:
+      required: true
+  - type: input
+    id: reporter-role
+    attributes:
+      label: Your clinical role (optional)
+      placeholder: "WOCN, wound-care physician, researcher, etc."

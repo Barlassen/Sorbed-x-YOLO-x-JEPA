@@ -1,0 +1,14 @@
+# Wounds-307 -> unified 7-class tissue schema (training/arrange_tissue.py)
+#
+# Wounds-307 annotates three wound-bed tissues (granulation / slough / eschar)
+# plus background, matching the RYB core directly. The grayscale indices below
+# follow the dataset's documented class order; CONFIRM them against
+# mapping_report.json after the first run (it lists every native value + pixel
+# count) and adjust if this copy encodes the classes differently.
+mode: grayscale
+unmapped: error
+map:
+  0: background
+  1: granulation
+  2: slough
+  3: eschar

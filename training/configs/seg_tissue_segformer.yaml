@@ -1,0 +1,77 @@
+# Single-model tissue segmenter — SegFormer / MiT-b4 (training/train_seg.py)
+#
+# ONE multiclass tissue-segmentation model covering ALL wound types. Its output
+# is sufficient to drive the full HD_T86 report: the wound mask is every
+# non-background pixel; the RYB tissue composition (section 4.5.9) is the
+# per-class pixel fractions; wound size (4.5.11) and PUSH sub-scores (4.5.8)
+# are morphometrics of the mask; and the stage (Evre 1-4 / Unstageable / Deep
+# Tissue Injury) is DERIVED from the tissue composition + morphometry by the
+# deterministic HD_T86 rule engine (src/sorbed) — the guideline-faithful,
+# auditable path — not learned by this network.
+#
+# CLASS ORDER (ONNX logits channel index -> tissue). num_classes MUST be 7 and
+# the arrange step below MUST write mask pixel values in exactly this order:
+#   0  background        (intact skin / off-wound)
+#   1  epithelial        (RYB red: re-epithelialising margin)
+#   2  granulation       (RYB red: healthy healing bed)
+#   3  slough            (RYB yellow: fibrin / non-viable soft tissue)
+#   4  eschar            (RYB black: necrotic)
+#   5  adipose           (visible fat -> HD_T86 forces >= Evre 3)
+#   6  deep_structure    (muscle / tendon / bone -> HD_T86 forces Evre 4)
+#
+# Architecture (mid-2026): a cross-dataset wound-segmentation benchmark
+# (arXiv:2607.02555) reports SegFormer/MiT generalises across hospitals better
+# than U-Net / DeepLabV3+ with the fewest catastrophic failures, and MiT
+# encoders export cleanly to ONNX (no custom ops, unlike Mamba/SAM). Use mit_b3
+# for more MIG headroom or mit_b5 if throughput allows.
+#
+# DATA — partial-label, multi-source. Tissue-mask sets (DFUTissue, WoundTissue,
+# Wounds-307, ComplexWoundDB) supervise classes 1-6; large binary wound sets
+# (AZH/FUSeg, Mendeley lower-limb, CO2Wounds, WSNet) supervise localization only,
+# as class 0 vs a "foreground, class unknown" superset (see the loss's
+# superset term + training/data.py SUPERSET_SENTINEL). Mark each source's
+# mask_kind ('tissue' or 'binary') in the data-prep config so the manifest
+# carries it; train_seg.py routes binary foreground to the superset sentinel
+# automatically. The per-source native->unified label remap (each tissue set's
+# own class ids -> the 7 above) is the one MANUAL arrange step — no public set
+# ships this schema. See training/DATA_README.md.
+#
+#   python training/fetch_corpus.py --data-root /data/sorbed/datasets
+#   # (arrange tissue masks to the 7-class order; set mask_kind per source)
+#   python training/data_prep.py --config training/configs/datasets.yaml \
+#       --out-dir /data/sorbed/manifests/combined
+#   python -m training.train_seg --config training/configs/seg_tissue_segformer.yaml \
+#       --manifest /data/sorbed/manifests/combined/train.csv \
+#       --out-dir artifacts/seg_tissue
+#
+# Run a perceptual-hash de-duplication over the sources before training — several
+# public sets share images. Cross-hospital colour/illumination shift is the main
+# failure mode; the augmentation in training/data.py handles it.
+
+arch: segformer
+encoder: mit_b4
+encoder_weights: imagenet   # 'none' to train fully offline / from scratch
+decoder_attention: none     # honored only by the U-Net family
+num_classes: 7              # background + 6 tissue classes (order above)
+
+input_size: 512
+epochs: 200
+batch_size: 12              # ~fits one 40-71 GB MIG slice at 512 px with AMP
+lr: 6.0e-5
+weight_decay: 0.01
+warmup_epochs: 5
+
+# Grouped patient-level split comes from the manifest's patient_id (--manifest);
+# these apply to the random hold-out fallback and to which fold is trained.
+val_fraction: 0.15
+folds: 5
+fold: 0
+
+num_workers: 8             # auto-capped by RAM / /dev/shm (training/memory.py)
+# vram_fraction: 0.92      # optional catchable-OOM cap on the MIG slice
+amp: true
+grad_checkpointing: false  # MiT has no gradient-checkpointing hook; raise later if needed
+seed: 1234
+device: auto
+export_onnx: true
+out_dir: artifacts/seg_tissue

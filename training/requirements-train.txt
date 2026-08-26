@@ -1,0 +1,31 @@
+# Training-only Python dependencies for the Sorbed wound segmenter.
+#
+# torch and torchvision are intentionally NOT listed here: they must be pulled
+# from the CUDA-matched PyTorch wheel index (cu124 / cu128), which
+# training/server/setup_env.sh does explicitly before installing this file.
+# Installing torch from PyPI here would silently fetch a mismatched build.
+#
+#   pip install -r training/requirements-train.txt
+#
+# The sorbed package itself is installed separately (editable) by setup_env.sh,
+# which also pulls in its core runtime dependencies (numpy, opencv, pyyaml, ...).
+
+# Segmentation architectures (U-Net / U-Net++ / SegFormer / MAnet / DeepLabV3+).
+segmentation-models-pytorch>=0.3.3
+# Encoder backbones (tu-* EfficientNetV2, MiT) used by the configs.
+timm>=0.9.16
+# Image augmentation pipeline used by training/data.py.
+albumentations>=1.4.0
+# Array + image IO. opencv-headless avoids pulling GUI/X11 libs on the server.
+numpy>=1.24
+scipy>=1.10
+opencv-python-headless>=4.8
+# Config parsing for training/configs/*.yaml.
+PyYAML>=6.0
+# Training curves; training/utils.py degrades gracefully if this is absent, but
+# installing it makes `tensorboard --logdir` work out of the box.
+tensorboard>=2.16
+# ONNX graph validation for the exported model (the export itself only needs
+# torch.onnx; these verify + run it on CPU before you ship the weights).
+onnx>=1.16
+onnxruntime>=1.17

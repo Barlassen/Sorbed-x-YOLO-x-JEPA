@@ -1,0 +1,148 @@
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="light dark" />
+<title>Sorbed — pressure-injury analysis</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23635bff'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="/static/styles.css" />
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="app-header">
+  <div class="brand">
+    <span class="logo-tile" aria-hidden="true"></span>
+    <span class="brand-text">
+      <span class="wordmark">Sorbed</span>
+      <span class="subtitle">pressure-injury analysis</span>
+    </span>
+  </div>
+  <div class="header-tools">
+    <button type="button" id="themeToggle" class="ghost-btn" aria-label="Toggle color theme">
+      <span class="theme-ico" aria-hidden="true"></span>
+    </button>
+  </div>
+</header>
+
+<div class="disclaimer-strip" id="disclaimer" role="note">
+  <span class="disc-ico" aria-hidden="true">!</span>
+  <span class="disc-text"><strong>Decision support — not a diagnosis.</strong> For clinician review.</span>
+  <button type="button" class="disc-close" id="disclaimerClose" aria-label="Dismiss disclaimer">×</button>
+</div>
+
+<nav class="tabs-nav" aria-label="Views">
+  <div class="tablist" role="tablist" aria-label="Sorbed views">
+    <button role="tab" id="tab-analyze" aria-controls="panel-analyze" aria-selected="true" tabindex="0" class="tab">Analyze</button>
+    <button role="tab" id="tab-trend" aria-controls="panel-trend" aria-selected="false" tabindex="-1" class="tab">Healing trend</button>
+  </div>
+</nav>
+
+<main id="main">
+  <h1 class="visually-hidden">Sorbed pressure-injury wound analysis</h1>
+
+  <!-- ============ ANALYZE PANEL ============ -->
+  <section id="panel-analyze" role="tabpanel" aria-labelledby="tab-analyze" class="panel" tabindex="0">
+    <div class="intake card">
+      <div id="dropzone" class="dropzone" role="button" tabindex="0"
+           aria-describedby="dropHelp" aria-label="Upload wound image. Drag and drop, or press Enter to choose a file.">
+        <input type="file" id="fileInput" accept="image/*" class="visually-hidden" />
+        <div class="dz-inner">
+          <span class="dz-icon" aria-hidden="true"></span>
+          <p class="dz-title">Drop a wound image here</p>
+          <p class="dz-sub" id="dropHelp">or click to browse — PNG · JPEG · WEBP · HEIC · DICOM · TIFF</p>
+        </div>
+        <div class="dz-preview" id="dzPreview" hidden>
+          <img id="previewImg" alt="Selected wound image preview" />
+          <span class="dz-noimg" aria-hidden="true">FILE</span>
+          <div class="dz-fileinfo">
+            <span id="fileName" class="file-name"></span>
+            <span id="previewNote" class="dz-note" hidden>Preview isn't shown for this
+              format — it will still be analyzed.</span>
+            <button type="button" id="clearFile" class="link-btn">Remove</button>
+          </div>
+        </div>
+      </div>
+
+      <details class="options">
+        <summary>Calibration options</summary>
+        <p class="options-help">Optional — enables real-world cm² measurements. Provide one.</p>
+        <div class="options-grid">
+          <div class="field">
+            <label for="mmPerPx">mm per pixel</label>
+            <input type="number" id="mmPerPx" step="any" min="0" inputmode="decimal" placeholder="e.g. 0.12" />
+          </div>
+          <div class="field">
+            <label for="markerMm">ArUco marker (mm)</label>
+            <input type="number" id="markerMm" step="any" min="0" inputmode="decimal" placeholder="e.g. 20" />
+          </div>
+          <div class="field">
+            <label for="coinMm">Coin diameter (mm)</label>
+            <input type="number" id="coinMm" step="any" min="0" inputmode="decimal" placeholder="e.g. 24.26" />
+          </div>
+        </div>
+      </details>
+
+      <div class="intake-actions">
+        <button type="button" id="analyzeBtn" class="primary-btn" disabled>
+          <span class="btn-spinner" aria-hidden="true"></span>
+          <span class="btn-label">Analyze</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="analyzeError" class="alert alert-error" role="alert" hidden></div>
+
+    <div id="analyzeResults" class="results" aria-live="polite" aria-busy="false"></div>
+  </section>
+
+  <!-- ============ TREND PANEL ============ -->
+  <section id="panel-trend" role="tabpanel" aria-labelledby="tab-trend" class="panel" tabindex="0" hidden>
+    <div class="intake card">
+      <div class="trend-meta">
+        <div class="field">
+          <label for="patientLabel">Patient / wound label</label>
+          <input type="text" id="patientLabel" placeholder="optional" autocomplete="off" />
+        </div>
+        <div class="field">
+          <label for="trendMmPerPx">mm per pixel</label>
+          <input type="number" id="trendMmPerPx" step="any" min="0" inputmode="decimal" placeholder="optional" />
+        </div>
+      </div>
+
+      <fieldset class="visits">
+        <legend>Visits <span class="muted">(in date order, oldest first)</span></legend>
+        <div id="visitRows" class="visit-rows"></div>
+        <div class="visits-actions">
+          <button type="button" id="addVisitBtn" class="secondary-btn">+ Add visit</button>
+          <label class="multi-add">
+            <input type="file" id="multiFileInput" accept="image/*" multiple class="visually-hidden" />
+            <span class="link-btn">Add several images…</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <div class="intake-actions">
+        <button type="button" id="compareBtn" class="primary-btn" disabled>
+          <span class="btn-spinner" aria-hidden="true"></span>
+          <span class="btn-label">Compare visits</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="trendError" class="alert alert-error" role="alert" hidden></div>
+
+    <div id="trendResults" class="results" aria-live="polite" aria-busy="false"></div>
+  </section>
+</main>
+
+<!-- Lightbox -->
+<dialog id="lightbox" class="lightbox" aria-label="Enlarged image">
+  <button type="button" id="lightboxClose" class="lightbox-close" aria-label="Close">×</button>
+  <figure class="lightbox-fig">
+    <img id="lightboxImg" alt="" />
+    <figcaption id="lightboxCap"></figcaption>
+  </figure>
+</dialog>
+
+<!-- Tooltip layer for charts -->
+<div id="chartTip" class="chart-tip" role="status" hidden></div>
+
+<script src="/static/app.js"></script>

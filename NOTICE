@@ -1,0 +1,27 @@
+Sorbed — Pressure Injury Grading & Wound Analysis System
+Copyright 2026 Ariorad Moniri
+
+This product includes software developed by Ariorad Moniri and the Sorbed
+contributors.
+
+Licensed under the Apache License, Version 2.0. See the LICENSE file for the
+full license text.
+
+------------------------------------------------------------------------------
+CLINICAL & REGULATORY NOTICE
+------------------------------------------------------------------------------
+Sorbed is clinical DECISION-SUPPORT and research software. It is NOT a medical
+device, is NOT a diagnostic tool, and has NOT been cleared or approved by the
+FDA, EMA, MHRA, or any other regulatory authority. Every output is intended to
+assist a qualified clinician and must be reviewed by one. Sorbed does not
+replace in-person wound assessment, clinical judgment, or a documented plan of
+care. See DISCLAIMER.md for the full statement of limitations.
+
+------------------------------------------------------------------------------
+THIRD-PARTY COMPONENTS
+------------------------------------------------------------------------------
+This software may download, at the user's explicit request, third-party model
+weights and datasets that are distributed under their own licenses. Sorbed does
+not redistribute those weights; it records their provenance and license in
+`model_cards/` and requires the user to accept each license before download.
+See docs/MODELS.md for the provenance registry.

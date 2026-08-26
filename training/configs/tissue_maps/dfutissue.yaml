@@ -1,0 +1,23 @@
+# DFUTissue -> unified 7-class tissue schema (training/arrange_tissue.py)
+#
+# DFUTissue (uwm-bigdata/DFUTissueSegNet) labels diabetic-foot wound tissues
+# including the depth-bearing structures (tendon/bone) that HD_T86 maps to
+# Evre 4. The mapping collapses the dataset's fine tissue set onto the six
+# unified tissue classes:
+#   - fibrin / non-viable soft tissue -> slough
+#   - necrotic / eschar              -> eschar
+#   - callus is peri-wound keratin, not a wound-bed tissue -> background
+#   - tendon / bone / muscle         -> deep_structure
+# CONFIRM the native grayscale indices against mapping_report.json before
+# training — this copy's encoding governs, not the comment.
+mode: grayscale
+unmapped: error
+map:
+  0: background
+  1: epithelial
+  2: granulation
+  3: slough
+  4: eschar
+  5: deep_structure   # tendon
+  6: deep_structure   # bone
+  7: background        # callus (peri-wound keratin, off wound-bed)
