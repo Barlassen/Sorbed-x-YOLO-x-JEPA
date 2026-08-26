@@ -1,0 +1,88 @@
+name: 🐛 Bug report
+description: Something crashed, errored, or behaved incorrectly (not a grading-accuracy concern).
+title: "[bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please **do not upload real patient images** —
+        use a synthetic or de-identified image, or describe the input.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Pre-flight checks
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
+        - label: This is a software defect, not a clinical-accuracy concern (those go to the "Grading accuracy" template).
+          required: true
+        - label: I did not attach any protected health information (PHI).
+          required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug and what you expected instead.
+      placeholder: Running `sorbed analyze image.dcm` raised ... but I expected ...
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Exact commands or API calls. Include the input format.
+      placeholder: |
+        1. sorbed analyze sample.heic --scale-mm-per-px 0.12
+        2. ...
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Traceback / logs
+      description: Paste the full error output. Run with `--verbose` if possible.
+      render: shell
+  - type: input
+    id: version
+    attributes:
+      label: Sorbed version
+      description: Output of `sorbed --version` or the commit SHA.
+    validations:
+      required: true
+  - type: dropdown
+    id: input-format
+    attributes:
+      label: Input image format
+      options:
+        - PNG
+        - JPEG
+        - WEBP
+        - BMP
+        - TIFF
+        - HEIC/HEIF
+        - DICOM
+        - RAW (camera)
+        - Other / multiple
+    validations:
+      required: true
+  - type: dropdown
+    id: compute
+    attributes:
+      label: Compute backend
+      options:
+        - CPU
+        - CUDA (NVIDIA GPU)
+        - MPS (Apple Silicon)
+        - ROCm
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Python version, install method (pip/Docker), and `pip freeze` for the sorbed deps if relevant.
+      render: shell
+    validations:
+      required: true

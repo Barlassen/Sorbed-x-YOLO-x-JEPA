@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use Sorbed in your work, please cite it as below."
+title: "Sorbed: explainable pressure-injury image analysis and grading"
+abstract: >-
+  Sorbed is open-source clinical decision-support software that analyzes
+  photographs of pressure injuries (bedsores) and produces an explainable,
+  provisional grade with a ranked evidence trace, tissue composition, and
+  calibrated morphometrics. It is not a medical device and does not diagnose.
+type: software
+authors:
+  - family-names: Moniri
+    given-names: Ariorad
+    email: 32umutkk@gmail.com
+version: 0.1.0
+date-released: "2026-01-01"
+license: Apache-2.0
+repository-code: "https://github.com/ArioMoniri/Sorbed"
+url: "https://github.com/ArioMoniri/Sorbed"
+keywords:
+  - pressure-injury
+  - pressure-ulcer
+  - bedsore
+  - wound-care
+  - medical-imaging
+  - decision-support
+  - explainable-ai

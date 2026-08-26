@@ -1,0 +1,85 @@
+# Sorbed build roadmap — machine-readable phase manifest.
+#
+# The watchdog (scripts/watchdog.py) reads this file: any phase marked
+# `status: done` must have every path in `artifacts` present on disk, so a
+# phase cannot be reported complete while its deliverables are missing.
+#
+# status: todo | in_progress | done
+
+phases:
+  - id: 0
+    name: "Skeleton & domain contracts"
+    status: done
+    artifacts:
+      - pyproject.toml
+      - src/sorbed/__init__.py
+      - src/sorbed/domain/enums.py
+      - src/sorbed/domain/analysis.py
+
+  - id: 1
+    name: "Multi-format image I/O & normalization"
+    status: done
+    artifacts:
+      - src/sorbed/io/sniff.py
+      - src/sorbed/io/registry.py
+      - src/sorbed/io/normalize.py
+
+  - id: 2
+    name: "Scale calibration"
+    status: done
+    artifacts:
+      - src/sorbed/preprocess/calibration.py
+      - src/sorbed/preprocess/fiducial.py
+
+  - id: 3
+    name: "Classical segmentation, tissue analysis & morphometrics (weight-free)"
+    status: done
+    artifacts:
+      - src/sorbed/segmentation/classical.py
+      - src/sorbed/tissue/color_model.py
+      - src/sorbed/morphometrics/geometry.py
+
+  - id: 4
+    name: "Visualization, guides & reporting"
+    status: done
+    artifacts:
+      - src/sorbed/visualize/overlay.py
+      - src/sorbed/report/json_report.py
+
+  - id: 5
+    name: "Explainable staging engine (rule layer)"
+    status: done
+    artifacts:
+      - src/sorbed/staging/engine.py
+      - src/sorbed/staging/rules.py
+      - src/sorbed/explain/narrative.py
+
+  - id: 6
+    name: "Pluggable ML segmentation backends + weight registry"
+    status: done
+    artifacts:
+      - src/sorbed/segmentation/backends/onnx_backend.py
+      - src/sorbed/models/registry.py
+
+  - id: 7
+    name: "ML staging head + SHAP attributions + arbiter"
+    status: done
+    artifacts:
+      - src/sorbed/staging/ml_head.py
+      - src/sorbed/staging/arbiter.py
+
+  - id: 8
+    name: "Pipeline orchestration, CLI & FastAPI service"
+    status: done
+    artifacts:
+      - src/sorbed/pipeline/analyzer.py
+      - src/sorbed/cli/main.py
+      - src/sorbed/api/app.py
+
+  - id: 9
+    name: "Docs, model cards, Docker & release hardening"
+    status: done
+    artifacts:
+      - README.md
+      - Dockerfile
+      - docs/MODELS.md

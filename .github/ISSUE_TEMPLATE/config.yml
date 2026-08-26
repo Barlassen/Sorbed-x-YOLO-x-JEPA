@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🔒 Security or privacy vulnerability
+    url: https://github.com/ArioMoniri/Sorbed/security/advisories/new
+    about: Report privately. Never file PHI leaks or RCE in a public issue — see SECURITY.md.
+  - name: 💬 Questions & discussion
+    url: https://github.com/ArioMoniri/Sorbed/discussions
+    about: Ask usage questions, share results, or propose ideas before filing a formal request.

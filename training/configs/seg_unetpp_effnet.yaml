@@ -1,0 +1,39 @@
+# Segmentation — U-Net++ / EfficientNetV2 CNN recipe (training/train_seg.py)
+#
+# The FUSegNet-line CNN alternative to SegFormer: U-Net++ with scSE decoder
+# attention over a timm EfficientNetV2-S encoder. Slightly higher single-dataset
+# Dice than SegFormer in some runs; also clean to ONNX. Note: MiT encoders are
+# SegFormer-only in SMP, so U-Net++/MAnet must use a CNN (tu-*) encoder.
+#
+# This encoder supports true gradient checkpointing (grad_checkpointing: true),
+# which trades compute for memory at 1024 px.
+#
+# DATA: identical layout/source to seg_segformer.yaml (AZH + FUSeg).
+
+arch: unetplusplus
+encoder: tu-tf_efficientnetv2_s
+encoder_weights: imagenet
+decoder_attention: scse
+num_classes: 1
+
+input_size: 768
+epochs: 80
+batch_size: 8
+lr: 3.0e-4
+weight_decay: 0.0001
+warmup_epochs: 4
+
+val_fraction: 0.2
+folds: 5
+fold: 0
+
+num_workers: 8          # auto-capped by available RAM (training/memory.py)
+# vram_fraction: 0.92   # optional: cap the process to this share of the MIG slice
+#                         so it hits a catchable OOM (auto micro-batch shrink)
+#                         instead of a hard crash. Leave unset for no cap.
+amp: true
+grad_checkpointing: true
+seed: 1234
+device: auto
+export_onnx: true
+out_dir: artifacts/seg_unetpp

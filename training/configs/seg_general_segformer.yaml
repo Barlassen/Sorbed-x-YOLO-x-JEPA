@@ -1,0 +1,53 @@
+# General multi-wound-type segmenter — SegFormer / MiT-b4 (training/train_seg.py)
+#
+# A single binary wound-vs-background segmenter covering ALL wound types
+# (pressure injury, diabetic-foot, venous, arterial, surgical, trauma, leprosy),
+# trained on the aggregated multi-source corpus (training/configs/datasets.yaml
+# via training/data_prep.py -> --manifest below).
+#
+# Architecture choice (mid-2026): a cross-dataset wound-segmentation benchmark
+# (arXiv:2607.02555) reports that SegFormer/MiT generalises across hospitals
+# better than U-Net / DeepLabV3+, with the fewest catastrophic failures. MiT
+# encoders export cleanly to ONNX (no custom ops, unlike Mamba/SAM). Use mit_b3
+# for more MIG headroom or mit_b5 if throughput allows.
+#
+# DATA: build the combined manifest first, then pass --manifest:
+#   python training/fetch_corpus.py --data-root /data/sorbed/datasets   # open sources
+#   python training/data_prep.py --config training/configs/datasets.yaml \
+#       --out-dir /data/sorbed/manifests/combined
+#   python -m training.train_seg --config training/configs/seg_general_segformer.yaml \
+#       --manifest /data/sorbed/manifests/combined/train.csv \
+#       --out-dir artifacts/seg_general
+#
+# Cross-hospital colour/illumination shift is the main failure mode; the
+# augmentation in training/data.py applies flips/rotation/scale + photometric
+# jitter for this. Run a perceptual-hash de-duplication over the sources before
+# training — AZH / FUSeg / Kaggle-merged / WSNet share many of the same images.
+
+arch: segformer
+encoder: mit_b4
+encoder_weights: imagenet   # 'none' to train fully offline / from scratch
+decoder_attention: none     # honored only by the U-Net family
+num_classes: 1              # 1 = binary wound mask
+
+input_size: 512
+epochs: 200
+batch_size: 12              # ~fits one 40-71 GB MIG slice at 512 px with AMP
+lr: 6.0e-5
+weight_decay: 0.01
+warmup_epochs: 5
+
+# Grouped patient-level split comes from the manifest's patient_id (--manifest);
+# these apply to the random hold-out fallback and to which fold is trained.
+val_fraction: 0.15
+folds: 5
+fold: 0
+
+num_workers: 8             # auto-capped by RAM / /dev/shm (training/memory.py)
+# vram_fraction: 0.92      # optional catchable-OOM cap on the MIG slice
+amp: true
+grad_checkpointing: false  # MiT has no gradient-checkpointing hook; raise later if needed
+seed: 1234
+device: auto
+export_onnx: true
+out_dir: artifacts/seg_general

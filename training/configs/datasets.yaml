@@ -1,0 +1,210 @@
+# Rich combined wound corpus — the real multi-source manifest.
+#
+# This is the production companion to configs/datasets.example.yaml. It declares
+# every OPEN source that training/fetch_corpus.py can pull programmatically, plus
+# the GATED / registration / unverified-host sources (kept COMMENTED with their
+# manual step). It is consumed by training/data_prep.py:
+#
+#   1) fetch the open sources:
+#        python training/fetch_corpus.py --data-root /data/briefer/corpus
+#      (this creates one sub-directory per source, named exactly like `name`
+#       below; the `root:` paths here point at those sub-directories).
+#   2) aggregate into leakage-free manifests:
+#        python training/data_prep.py \
+#            --config training/configs/datasets.yaml \
+#            --out-dir /data/briefer/manifests/combined \
+#            --paths-relative-to /data/briefer/corpus
+#
+# The adapters in training/datasets.py understand two layouts only: `azh_fuseg`
+# (per-split images/ + labels/) and `generic` (flat images/ + masks/ paired by
+# stem). Sources that do not already ship that layout must be re-arranged into it
+# after fetching — see the "Rich combined corpus" section of DATA_README.md. Set
+# `require_masks: false` for classification/staging sources with no masks (they
+# still feed the grading head, and become MedSAM mask-factory inputs).
+#
+# `mask_kind` (default `binary`) tells the 7-class tissue segmenter how to read a
+# source's masks: `tissue` = pixel values are unified tissue-class indices
+# (0 background .. 6 deep_structure, the order in seg_tissue_segformer.yaml);
+# `binary` = wound-vs-background only, so the mask supplies partial-label
+# (localization) supervision via the loss's superset term and never invents a
+# class. IMPORTANT: a `tissue` source's native class ids must first be re-mapped
+# to the unified order by the manual arrange step (DATA_README.md) — no public
+# set ships that schema. Ignored by the binary segmenter (num_classes: 1).
+#
+# Every `license` tag is hygiene metadata, not legal advice: re-check each
+# source's terms before any non-research use. Flags from the dataset audit are
+# repeated inline so they travel with the config.
+
+sources:
+  # --- Segmentation core: real masks --------------------------------------
+  # AZH + FUSeg foot-ulcer binary masks (research-only). Fetched by
+  # scripts/fetch_fuseg.py via fetch_corpus.py's `azh_fuseg` source, which lays
+  # out train/ + validation/ folders each with images/ + labels/.
+  - name: azh_fuseg
+    root: /data/briefer/corpus/azh_fuseg
+    adapter: azh_fuseg
+    body_part: foot
+    license: research-only
+
+  # Lower Limb & Feet Wound Dataset (Mendeley hsj38fwnvr, CC-BY-4.0). 2,686
+  # expert-masked images + 8 wound-type labels (NO NPIAP stage). Re-arrange the
+  # masked split into images/ + masks/ after the Mendeley download.
+  - name: lowerlimb_feet
+    root: /data/briefer/corpus/lowerlimb_feet
+    adapter: generic
+    body_part: lower_limb
+    license: cc-by-4.0
+    require_masks: true
+
+  # CO2Wounds-V2 (Mendeley s2w7rjwz49). 764 leprosy chronic-wound images with
+  # COCO polygons + binary semantic masks. Use the binary masks as images/ +
+  # masks/; the COCO polygons are for instance work.
+  - name: co2wounds_v2
+    root: /data/briefer/corpus/co2wounds_v2
+    adapter: generic
+    body_part: mixed
+    license: open-access-cite-required
+    require_masks: true
+
+  # WSNet / WOUNDSEG (github.com/subbareddy248/WSNET). Multi-type wound masks
+  # (8 wound types), mixed body parts.
+  - name: wsnet
+    root: /data/briefer/corpus/wsnet
+    adapter: generic
+    body_part: mixed
+    license: research
+    require_masks: true
+
+  # --- Grading teachers: tissue-type / depth masks ------------------------
+  # DFUTissue (github.com/uwm-bigdata/DFUTissueSegNet). 110 imgs, 8 tissue
+  # classes incl. tendon/bone (depth axis). License UNSTATED (research/AZH) —
+  # flag before non-research use. Data lives in the DFUTissue/ subfolder.
+  - name: dfutissue
+    root: /data/briefer/corpus/dfutissue/DFUTissue
+    adapter: generic
+    body_part: foot
+    license: unstated-research
+    require_masks: true
+    mask_kind: tissue   # after arrange -> unified 7-class order
+
+  # ComplexWoundDB (github.com/recogna-lab/datasets). 27 in-the-wild imgs, 5
+  # tissue classes; license "free available" (unspecified) — pilot only. Data in
+  # the ComplexWoundDB/ subfolder.
+  - name: complexwounddb
+    root: /data/briefer/corpus/complexwounddb/ComplexWoundDB
+    adapter: generic
+    body_part: mixed
+    license: unspecified-free
+    require_masks: true
+    mask_kind: tissue   # after arrange -> unified 7-class order
+
+  # --- Grading teachers: stage labels (maskless -> also MedSAM inputs) -----
+  # PIID (github.com/FU-MedicalAI/PIID). ~1,091 whole-image stage labels
+  # (EPUAP I-IV per most sources — confirm guideline attribution), no masks, no
+  # explicit license. Fill stage_label from class-folder names before use.
+  - name: piid
+    root: /data/briefer/corpus/piid
+    adapter: generic
+    body_part: mixed
+    license: no-stated-license
+    require_masks: false
+
+  # Roboflow pressure-ulcer stage1-4 (stage2-n7xya/pressure-ulcer-sxitf).
+  # ~2,811 imgs with stage bounding boxes (guideline NPIAP/EPUAP UNCONFIRMED —
+  # flag). Boxes double as MedSAM box prompts in the mask-factory.
+  - name: roboflow_stages
+    root: /data/briefer/corpus/roboflow_stages
+    adapter: generic
+    body_part: mixed
+    license: roboflow-universe-varies
+    require_masks: false
+
+  # Kaggle pressure-ulcers-stages (sinemgokoz). Stage classes, multi-site, no
+  # masks (guideline UNCONFIRMED — flag). Point prompts feed the mask-factory.
+  - name: kaggle_stages
+    root: /data/briefer/corpus/kaggle_stages
+    adapter: generic
+    body_part: mixed
+    license: kaggle-inherits-source
+    require_masks: false
+
+  # --- GATED / registration / UNVERIFIED host: fetch by hand, then enable --
+  # These are intentionally disabled. fetch_corpus.py prints the same manual
+  # step and expects the prepared data at /data/briefer/corpus/<name>. After you
+  # satisfy each source's terms and arrange it as images/ + masks/ (or a class
+  # folder), uncomment the block.
+  #
+  # DFUC 2020/2021/2022/2024 (GATED, data-use agreement — non-commercial).
+  # Apply at dfu-challenge.github.io; DFUC 2021 patch labels feed grading only.
+  # - name: dfuc
+  #   root: /data/briefer/corpus/dfuc
+  #   adapter: generic
+  #   body_part: foot
+  #   license: dfu-dua
+  #   require_masks: true
+  #
+  # WoundsDB (registration at chronicwounddatabase.eu, browser only).
+  # - name: woundsdb
+  #   root: /data/briefer/corpus/woundsdb
+  #   adapter: generic
+  #   body_part: mixed
+  #   license: registration
+  #   require_masks: true
+  #
+  # Medetec (medetec.co.uk — open reuse, but MASKLESS; MedSAM pseudo-label pool).
+  # - name: medetec
+  #   root: /data/briefer/corpus/medetec
+  #   adapter: generic
+  #   body_part: mixed
+  #   license: open-reuse
+  #   require_masks: false
+  #
+  # Wounds-307 (Sci. Reports s41598-025-06703-5 — host UNVERIFIED by the audit;
+  # likely author request). Granulation/slough/eschar tissue masks.
+  # - name: wounds_307
+  #   root: /data/briefer/corpus/wounds_307
+  #   adapter: generic
+  #   body_part: mixed
+  #   license: unstated
+  #   require_masks: true
+  #   mask_kind: tissue   # after arrange -> unified 7-class order
+  #
+  # WoundTissue-147 (arXiv:2502.10652 — host UNVERIFIED by the audit; request).
+  # 6 tissue types incl. bone/tendon (depth).
+  # - name: woundtissue_147
+  #   root: /data/briefer/corpus/woundtissue_147
+  #   adapter: generic
+  #   body_part: mixed
+  #   license: unstated
+  #   require_masks: true
+  #   mask_kind: tissue   # after arrange -> unified 7-class order
+
+# Patient-level split. Fractions must sum to 1.0. Most of these sources carry no
+# patient IDs (each image is its own singleton group), so the split is
+# leakage-free by construction; a truly longitudinal source needs a hand-written
+# manifest with real patient_id / visit_index instead of an auto-adapter.
+split:
+  train: 0.70
+  val: 0.15
+  test: 0.15
+  # Stage labels and tissue axes are unevenly distributed across sources; keep
+  # `none` here and stratify per-head downstream, or set `stage_label` once the
+  # staging sources dominate the corpus.
+  stratify_by: none
+
+seed: 1234
+
+# Augmentation / colour-normalization defaults consumed by training/datasets.py
+# (AugmentationConfig). Read by the training loop, not by data_prep.py.
+augmentation:
+  input_size: 768
+  gray_world: true
+  hflip_prob: 0.5
+  vflip_prob: 0.5
+  rotate_limit: 20
+  brightness_contrast_prob: 0.5
+  hue_sat_prob: 0.3
+  # Mild colour jitter only: large hue shifts would corrupt tissue-colour cues
+  # that the grading teachers depend on.
+  hue_shift_limit: 6
+  sat_shift_limit: 12

@@ -1,0 +1,53 @@
+name: ✨ Feature request
+description: Suggest a new capability or improvement.
+title: "[feat]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Pre-flight checks
+      options:
+        - label: I searched existing issues and discussions for this idea.
+          required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: What are you trying to do that Sorbed doesn't yet support? Who benefits?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the capability. If it touches clinical logic, cite a guideline or paper.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Image ingestion / formats
+        - Segmentation / masks
+        - Tissue analysis
+        - Metrics / morphometrics
+        - Staging / grading engine
+        - Explainability
+        - Reporting / visualization
+        - API / CLI
+        - Models / training
+        - Docs
+    validations:
+      required: true
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I'm willing to help implement this.

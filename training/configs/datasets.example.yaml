@@ -1,0 +1,57 @@
+# Example data-prep config for training/data_prep.py.
+#
+# Copy this to datasets.yaml, edit the `root:` paths to point at the datasets you
+# prepared per training/DATA_README.md, and run:
+#
+#   python training/data_prep.py --config training/configs/datasets.yaml \
+#       --out-dir /data/briefer/manifests/combined \
+#       --paths-relative-to /data/briefer/datasets
+#
+# Nothing here is downloaded automatically. Every `root` must already exist; gated
+# datasets (DFUC, WoundsDB) require a manual application first — see DATA_README.md.
+# The `license` tags are hygiene metadata, not legal advice: re-check each source's
+# terms before any non-research use.
+
+# Where each dataset lives on disk and how to read it.
+sources:
+  # AZH Chronic Wound + FUSeg foot-ulcer masks (open, research-only).
+  # Adapter walks train/validation/test subfolders (images/ + labels/).
+  - name: azh_fuseg
+    root: /data/briefer/datasets/wound-segmentation/data/Foot_Ulcer_Segmentation_Challenge
+    adapter: azh_fuseg
+    body_part: foot
+    license: research-only
+
+  # A generic images/ + masks/ dump — e.g. the Kaggle 2,760-image merge, or your
+  # own institution's prepared masks. Each image becomes its own patient group
+  # unless you supply a manifest with real patient_ids.
+  - name: mixed_wounds
+    root: /data/briefer/datasets/mixed_wounds
+    adapter: generic
+    body_part: mixed
+    license: check-source
+    require_masks: true
+
+# Patient-level split. Fractions must sum to 1.0. `stratify_by` may be
+# `stage_label`, `body_part`, or `none`.
+split:
+  train: 0.70
+  val: 0.15
+  test: 0.15
+  stratify_by: none
+
+seed: 1234
+
+# Augmentation / colour-normalization defaults consumed by training/datasets.py
+# (AugmentationConfig). These are read by the training loop, not by data_prep.py.
+augmentation:
+  input_size: 768
+  gray_world: true
+  hflip_prob: 0.5
+  vflip_prob: 0.5
+  rotate_limit: 20
+  brightness_contrast_prob: 0.5
+  hue_sat_prob: 0.3
+  # Mild colour jitter only: large hue shifts would corrupt tissue-colour cues.
+  hue_shift_limit: 6
+  sat_shift_limit: 12
