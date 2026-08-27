@@ -23,9 +23,11 @@ class Settings(BaseSettings):
     segmentation_backend: str = "classical"
     tissue_backend: str = "color_model"
     staging_backend: str = "rule_engine"
-    # Depth cue for the Stage-3 rule. "classical" is the weight-free shading proxy;
-    # "yolo" uses a YOLO26 monocular-depth model (needs the [ml]/ultralytics extra).
-    depth_backend: str = "classical"
+    # Depth cue for the Stage-3 rule. "yolo" is the default: a YOLO26 monocular-depth
+    # model (needs the [ml]/ultralytics extra). It falls back to the weight-free
+    # "classical" shading proxy automatically if ultralytics/torch is unavailable, so
+    # the core still runs offline. Set SORBED_DEPTH_BACKEND=classical to force the proxy.
+    depth_backend: str = "yolo"
 
     # HuggingFace segmentation model id (used when segmentation_backend="hf_sam").
     hf_model_id: str = "facebook/sam-vit-base"
