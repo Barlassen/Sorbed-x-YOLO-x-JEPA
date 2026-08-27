@@ -1,0 +1,70 @@
+# Sorbed-JEPA: Bası Yarası Evreleme Sistemi Terimler Sözlüğü ve Teknik Dokümantasyon
+
+Bu doküman, Sorbed-JEPA projesinin tıbbi motivasyonunu, mimarisini, yapay zekâ bileşenlerini ve terimler sözlüğünü bir araya getirmektedir.
+
+---
+
+## 1. Tıbbi & Klinik Terminoloji
+
+* **Basınç Yarası (Pressure Injury / Decubitus Ulcer):** Uzun süre yatağa veya tekerlekli sandalyeye bağımlı hastalarda, kemik çıkıntıları (sakrum, iskium, topuk vb.) ile dış yüzey arasındaki bası nedeniyle doku perfüzyonunun bozulması sonucu gelişen hücresel iskemik nekroz.
+* **NPIAP / EPUAP:** *National/European Pressure Injury Advisory Panel.* Yara tanı, evreleme ve klinik kılavuz standartlarını belirleyen uluslararası komite.
+* **Evreleme Sistemi (NPIAP Staging):**
+  * **Evre 1:** Deri bütünlüğü bozulmamış, basmakla solmayan inatçı kızarıklık (*non-blanchable erythema*).
+  * **Evre 2:** Kısmi katmanlı deri kaybı (yalnızca *epidermis* veya kısmi *dermis*). Yüzeysel açık yara veya sağlam/patlamış serum bülü.
+  * **Evre 3:** Tam katmanlı deri kaybı. Subkutanöz yağ dokusu görünür, ancak alttaki fasya, kas, tendon veya kemik tutulumu yoktur.
+  * **Evre 4:** Tam katmanlı doku kaybı. Kas, kemik, tendon veya eklem kapsülü doğrudan görünür veya palpe edilir.
+  * **Unstageable (Evrelendirilemez) / DTI (Derin Doku Hasarı):** Yaranın tabanı nekrotik doku (slough/eschar) ile tamamen kapalı olduğu için derinlik netleştirilemeyen vakalar.
+* **Doku Tipleri (Tissue Types):**
+  * **Granülasyon Dokusu (Granulation):** İyileşme fazındaki parlak kırmızı, vasküler, hücresel canlı doku.
+  * **Slough (Eksüda / Fibrinöz Doku):** Yara tabanındaki sarı-krem renkli, ölü hücre ve fibrin kalıntılarından oluşan nemli doku.
+  * **Nekroz / Eschar (Nekrotik Kabuk):** Kurumuş, sertleşmiş, siyah/kahverengi ölü doku tabakası.
+* **Monoküler Derinlik Kestirimi (Monocular Depth Estimation):** Stereo (çift kamera) donanımı olmaksızın, tek bir 2D RGB fotoğraftaki ışık kırılması, perspektif ve doku gradyanlarından piksel bazında derinlik haritası üretilmesi.
+
+---
+
+## 2. Makine Öğrenimi & Derin Öğrenme Terminolojisi
+
+* **Self-Supervised Learning (SSL):** İnsan etiketine ihtiyaç duymadan, verinin bir parçasından diğer parçasını tahmin ederek (pretext task) genel görsel temsil öğrenme paradigması.
+* **JEPA (Joint-Embedding Predictive Architecture):** Pikselleri doğrudan üretmek (generative / auto-encoding) yerine, gizlenen bölgenin soyut anlamını (latent vector representation) tahmin etmeye dayanan mimari.
+* **Representation Learning (Temsil Öğrenimi):** Ham $H \times W \times C$ piksel matrisini, semantik anlam içeren kompakt sayı vektörlerine ($D$-boyutlu embedding) dönüştürme süreci.
+* **Vision Transformer (ViT):** Görüntüyü $16 \times 16$ piksellik yamalara (patch) bölerek öz-dikkat (self-attention) mekanizmalarıyla işleyen Transformer mimarisi.
+* **Patch & Embedding:**
+  * *Patch:* Görüntünün $P \times P$ boyutundaki temel ızgara birimi. ($224 \times 224$ görüntü için $14 \times 14 = 196$ patch).
+  * *Embedding / Latent Space:* Her bir patch'in semantik özelliklerini özetleyen sayısal vektör uzayı.
+* **Context vs. Target (Mask-Guided JEPA):**
+  * *Context (Bağlam):* Öğrenci ViT modeline girdi olarak verilen yara dışındaki çevreleyen sağlıklı deri dokusu patch'leri.
+  * *Target (Hedef):* Predictor ağının tahmin etmesi gereken, YOLO yara maskesi ile işaretlenmiş iç yara patch'leri.
+* **EMA (Exponential Moving Average) Target Encoder:** Öğrenci ağın ağırlıklarının momentum ile yavaş güncellenen kopyası olan öğretmen model. Ağın tüm çıktılara sıfır üretip öğrenmeyi durdurmasını (**Representation Collapse**) engeller.
+* **Stop-Gradient ($\text{stop\_grad}$):** Geri yayılımda gradyanların EMA öğretmen ağına akmasını engelleyen kısıt.
+* **Smooth-L1 Loss:** Hedef embedding ile tahmin edilen embedding arasındaki mesafeyi ölçen kayıp fonksiyonu ($L_1$ ve $L_2$ hibriti).
+* **Backbone vs. Head:**
+  * *Backbone (Omurga):* Görüntüden zengin temsiller çıkaran ön-eğitilmiş ViT yapısı.
+  * *Head (Kafa):* Backbone'un çıktısını alarak Evre 1/2/3/4 sınıflarına eşleyen hafif sınıflandırıcı katman.
+
+---
+
+## 3. Yazılım Mimarisi, Görüntü İşleme & Metrikler
+
+* **Segmentasyon (Segmentation) & Maske (Mask):** Görüntüdeki yara piksellerini ($1$) ve arka planı ($0$) ayıran ikili matris haritası.
+* **Morfometri (Morphometrics):** Yaranın yüzey alanı ($cm^2$), çevre uzunluğu, eksenel oranları ve hacimsel geometrisinin sayısal olarak hesaplanması.
+* **Pluggable Backend / Protocol Interface:** Sorbed çekirdeğini bozmadan segmentasyon adımında Klasik, ONNX veya YOLO motorlarının tak-çıkar modülerlikle kullanılabilmesi.
+* **Weight-Free / Klasik Hat:** Yapay zekâ modelleri veya GPU olmadan, salt renk uzayı dönüşümleri ve kenar tespitiyle çalışan deterministik çevrimdışı analiz hattı.
+* **Abstaining / Indeterminate (Çekimserlik):** Sistemin düşük güvenilirlikli veya çelişkili ölçümlerde yanlış teşhis üretmek yerine süreci hekime yönlendirmesi.
+* **Quadratic-Weighted Kappa (QWK / $\kappa$):** Sınıflar arası sıralı hata mesafesini karesel olarak cezalandıran evreleme uyum metriği (Evre 1 $\leftrightarrow$ 4 hatası, Evre 3 $\leftrightarrow$ 4 hatasından çok daha yüksek ceza alır).
+* **Dice Similarity Coefficient (DSC):** Tahmin edilen yara maskesi ile gerçek uzman maskesinin uzamsal örtüşme skoru ($0 \le \text{Dice} \le 1$).
+* **Ablation Study (Bileşen Sökme Deneyi):** `--init jepa` (ön-eğitimli omurga) ile `--init random` (rastgele başlatılan omurga) modlarını aynı veri setinde karşılaştırarak JEPA'nın sağladığı net marjinal katkıyı ölçen deney.
+* **Desteklenen Medikal Formatlar:** Tıbbi cihaz standardı olan DICOM (`.dcm`) ve mobil aygıt formatı HEIC/HEIF (`.heic`).
+
+---
+
+## 4. Sistem Dosya Eşleme Tablosu
+
+| Modül / Dosya Adı | Fonksiyonel Karşılığı | İlgili Terimler |
+| :--- | :--- | :--- |
+| `sorbed/core/pipeline.py` | Ana veri akışı, görüntü normalizasyonu, karar motoru | Pipeline, Normalization, Abstain |
+| `sorbed/segmentation/yolo_backend.py` | YOLO26 segmentasyon motoru prizi | Pluggable Backend, Mask, Dice |
+| `sorbed/depth/yolo_depth.py` | Monoküler derinlik haritalama | Monocular Depth, Shading vs. Learned Depth |
+| `sorbed/jepa/vit_encoder.py` | Vision Transformer backbone | ViT, Patch, Latent Space, Embedding |
+| `sorbed/jepa/mask_sampler.py` | Maske rehberli context/target ayrımı | Context vs Target, Mask-Guided Sampling |
+| `sorbed/jepa/trainer.py` | Self-supervised eğitim döngüsü | EMA Target Encoder, Stop-Gradient, Smooth-L1 |
+| `scripts/train_grade_jepa.py` | Evreleme kafası eğitimi ve ablasyon | Staging Head, QWK ($\kappa$), Ablation Study |
