@@ -41,6 +41,21 @@ yoksa 6 denemenin en iyisini seçmekten gelen iyimser yanlılık mı? Doğrulama
    macro-F1 güven aralığı çıkar (test-seti belirsizliği).
 3. İkisi birlikte → "JEPA random'ı gerçekten geçti mi" istatistiksel cevap.
 
+> **DURUM (kod hazır, laptop'ta koşulacak):** `training/validate_tissue_probe.py`
+> yazıldı ve push'landı. Üç maddeyi tek komutta yapıyor: çok-seed random dağılımı +
+> JEPA'nın z-skoru, **görüntü-seviyesi** bootstrap %95 CI, ve aynı yeniden-örneklenmiş
+> görüntülerde **eşleştirilmiş** (JEPA−random) delta CI + P(Δ>0). Not: `--init jepa`
+> deterministik (sabit ağırlık → sabit özellik → lbfgs deterministik), o yüzden JEPA
+> tek nokta; random ise seed'e göre dağılım. Verdict: JEPA>random ancak z>1 **ve**
+> eşleştirilmiş Δ CI'sı 0'ın üstündeyse "desteklenmiş" sayılıyor. Koş:
+> ```bash
+> python -m training.validate_tissue_probe --weights runs_jepa/jepa_best.pt \
+>     --crop --depth data/rgbd_tissue_labeled/depth --relief \
+>     --seeds 0 1 2 3 4 --bootstrap 2000 --out runs_jepa/tissue_validation.json
+> ```
+> Çıkan JSON'u mentör raporuna ekle. (Ön-işleme bayrakları JEPA ön-eğitimiyle
+> **birebir** aynı olmalı — probe ile aynı `--crop/--depth/--relief`.)
+
 **Diğer açık başlıklar:**
 - Derinlik/relief'i **evrelemede** dene (dokuda değil — derinlik oraya daha uygun,
   çünkü Evre 3↔4 derinliğe bağlı; doku ise renk işi).
