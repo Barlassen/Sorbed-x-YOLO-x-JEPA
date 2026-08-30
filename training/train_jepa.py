@@ -57,6 +57,8 @@ class JepaConfig:
     pred_depth: int = 4
     pred_heads: int = 3
     ema_momentum: float = 0.996  # target-encoder EMA decay
+    in_chans: int = 3            # 3 = RGB; 4 = RGB + YOLO depth (2.5D)
+    vic_weight: float = 0.0      # VICReg-style variance term to prevent collapse (0 = off)
 
     @property
     def grid(self) -> int:
@@ -68,11 +70,11 @@ class JepaConfig:
 
 
 class PatchEmbed(nn.Module):
-    """Non-overlapping conv patchifier: (B,3,H,W) -> (B, N, D)."""
+    """Non-overlapping conv patchifier: (B, C, H, W) -> (B, N, D). C = cfg.in_chans."""
 
     def __init__(self, cfg: JepaConfig) -> None:
         super().__init__()
-        self.proj = nn.Conv2d(3, cfg.enc_dim, cfg.patch_size, stride=cfg.patch_size)
+        self.proj = nn.Conv2d(cfg.in_chans, cfg.enc_dim, cfg.patch_size, stride=cfg.patch_size)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.proj(x)                    # (B, D, Gh, Gw)
@@ -176,13 +178,29 @@ class MaskGuidedJEPA(nn.Module):
             full_target = self.target_encoder(images)                 # EMA, all patches
             targets = _gather(full_target, tgt_idx)                   # stop-grad targets
         preds = self.predictor(context, ctx_idx, tgt_idx)
-        return F.smooth_l1_loss(preds, targets)
+        loss = F.smooth_l1_loss(preds, targets)
+        if self.cfg.vic_weight > 0:
+            # Anti-collapse: keep each feature dimension's spread ≥ 1 across the
+            # batch, so the encoder can't shrink everything to a near-constant.
+            loss = loss + self.cfg.vic_weight * _variance_term(context)
+        return loss
 
 
 def _gather(tokens: torch.Tensor, idx: torch.Tensor) -> torch.Tensor:
     """Gather tokens (B, N, D) at per-sample indices idx (B, K) -> (B, K, D)."""
     b, _, d = tokens.shape
     return torch.gather(tokens, 1, idx.unsqueeze(-1).expand(b, idx.size(1), d))
+
+
+def _variance_term(z: torch.Tensor) -> torch.Tensor:
+    """VICReg variance regulariser: hinge(1 - std) per feature dim, averaged.
+
+    ``z`` is (B, N, D); flattened to (B*N, D). Pushes every dimension's standard
+    deviation up to at least 1, so features stay diverse instead of collapsing.
+    """
+    z = z.reshape(-1, z.size(-1))
+    std = torch.sqrt(z.var(dim=0) + 1e-4)
+    return F.relu(1.0 - std).mean()
 
 
 # --------------------------------------------------------------------------- #
@@ -243,6 +261,42 @@ _IMAGENET_STD = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
 _IMG_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".webp"}
 
 
+def wound_box(mask: np.ndarray, pad_frac: float = 0.6):
+    """Bounding box around the wound mask, padded to also include peri-wound tissue.
+
+    Returns (x0, y0, x1, y1) or None when the mask is empty. The generous padding
+    (default 0.6 of the box side) answers the clinical note that the tissue around
+    the visible wound is part of it — the crop is not tight to the red centre.
+    """
+    ys, xs = np.where(mask > 0)
+    if xs.size == 0:
+        return None
+    x0, x1, y0, y1 = int(xs.min()), int(xs.max()), int(ys.min()), int(ys.max())
+    px = int((x1 - x0) * pad_frac) + 8
+    py = int((y1 - y0) * pad_frac) + 8
+    h, w = mask.shape[:2]
+    return max(0, x0 - px), max(0, y0 - py), min(w, x1 + px + 1), min(h, y1 + py + 1)
+
+
+def _standardize(x: torch.Tensor) -> torch.Tensor:
+    """Per-image zero-mean / unit-std, so the depth channel matches the RGB scale
+    (~std 1) instead of being ~10x weaker and effectively ignored."""
+    return (x - x.mean()) / (x.std() + 1e-6)
+
+
+def _relief_map(depth: np.ndarray, k: int) -> torch.Tensor:
+    """MinIP/MIP-inspired local relief: local-max(depth) − local-min(depth).
+
+    A dilation is a local maximum (MIP-like, the surface) and an erosion is a local
+    minimum (MinIP-like, the deepest point); their difference measures how much the
+    surface dips in a k×k neighbourhood, which is largest at the wound's crater and
+    rim. This is computed from the depth map — no extra data or labels needed.
+    """
+    kern = np.ones((k, k), np.uint8)
+    relief = cv2.dilate(depth, kern) - cv2.erode(depth, kern)
+    return torch.from_numpy(relief / 255.0).float()
+
+
 class WoundJepaDataset(Dataset):
     """Unlabeled wound images, each paired with a wound mask for guided sampling.
 
@@ -260,40 +314,79 @@ class WoundJepaDataset(Dataset):
     back to random targets, so pretraining degrades gracefully rather than crashing.
     """
 
-    def __init__(self, images_dir, masks_dir=None, mask_fn=None, img_size: int = 224) -> None:
+    def __init__(self, images_dir, masks_dir=None, mask_fn=None, img_size: int = 224,
+                 depth_dir=None, crop: bool = False, relief: bool = False,
+                 relief_k: int = 15) -> None:
         self.img_size = img_size
         self.paths = sorted(p for p in Path(images_dir).iterdir() if p.suffix.lower() in _IMG_EXTS)
         if not self.paths:
             raise FileNotFoundError(f"no images under {images_dir}")
         self.masks_dir = Path(masks_dir) if masks_dir else None
         self.mask_fn = mask_fn
+        # When set, a precomputed YOLO depth PNG per stem is stacked as a 4th input
+        # channel (2.5D: RGB + depth). The encoder must be built with in_chans=4.
+        self.depth_dir = Path(depth_dir) if depth_dir else None
+        # When True, crop to the (padded) wound box so the wound fills the frame
+        # instead of being ~1-2% of a wide shot — the fix for weak mask guidance.
+        self.crop = crop
+        # MinIP/MIP-inspired extra channel: local depth relief (max−min in a window),
+        # which peaks at the wound crater/edges. Derived from depth — needs no new data.
+        self.relief = relief
+        self.relief_k = relief_k
         if self.masks_dir is None and self.mask_fn is None:
             raise ValueError("provide either masks_dir (precomputed) or mask_fn (live)")
 
     def __len__(self) -> int:
         return len(self.paths)
 
-    def _mask_for(self, path: Path, bgr: np.ndarray) -> np.ndarray:
+    def _raw_mask(self, path: Path, bgr: np.ndarray) -> np.ndarray:
         if self.masks_dir is not None:
             m = cv2.imread(str(self.masks_dir / f"{path.stem}.png"), cv2.IMREAD_GRAYSCALE)
             if m is None:
                 m = np.zeros(bgr.shape[:2], np.uint8)
         else:
             m = self.mask_fn(bgr)
-        return (m > 0).astype(np.float32)
+        return (m > 0).astype(np.uint8)
 
     def __getitem__(self, i: int):
         path = self.paths[i]
         bgr = cv2.imread(str(path), cv2.IMREAD_COLOR)
         if bgr is None:
             raise RuntimeError(f"could not read image {path}")
-        mask = self._mask_for(path, bgr)
         rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
-        rgb = cv2.resize(rgb, (self.img_size, self.img_size), interpolation=cv2.INTER_LINEAR)
-        mask = cv2.resize(mask, (self.img_size, self.img_size), interpolation=cv2.INTER_NEAREST)
+        mask = self._raw_mask(path, bgr)
+        depth = self._raw_depth(path, bgr.shape[:2])
+
+        if self.crop:
+            box = wound_box(mask)
+            if box is not None:
+                x0, y0, x1, y1 = box
+                rgb, mask = rgb[y0:y1, x0:x1], mask[y0:y1, x0:x1]
+                depth = None if depth is None else depth[y0:y1, x0:x1]
+
+        s = self.img_size
+        rgb = cv2.resize(rgb, (s, s), interpolation=cv2.INTER_LINEAR)
+        mask = cv2.resize(mask, (s, s), interpolation=cv2.INTER_NEAREST).astype(np.float32)
         img = torch.from_numpy(rgb).permute(2, 0, 1).float() / 255.0
         img = (img - _IMAGENET_MEAN) / _IMAGENET_STD
+        if depth is not None:
+            dd = cv2.resize(depth, (s, s), interpolation=cv2.INTER_LINEAR).astype(np.float32)
+            extra = [_standardize(torch.from_numpy(dd).unsqueeze(0) / 255.0)]  # depth, ~RGB scale
+            if self.relief:
+                extra.append(_standardize(_relief_map(dd, self.relief_k).unsqueeze(0)))
+            img = torch.cat([img, *extra], dim=0)  # (4 or 5, H, W)
         return img, torch.from_numpy(mask)
+
+    def _raw_depth(self, path: Path, hw) -> np.ndarray | None:
+        """Native-resolution depth (uint8) for cropping, or None when no depth dir."""
+        if self.depth_dir is None:
+            return None
+        d = cv2.imread(str(self.depth_dir / f"{path.stem}.png"), cv2.IMREAD_GRAYSCALE)
+        if d is None:
+            return np.zeros(hw, np.uint8)
+        if d.shape != tuple(hw):
+            d = cv2.resize(d, (hw[1], hw[0]), interpolation=cv2.INTER_LINEAR)
+        return d
 
 
 def yolo_mask_fn(weights: str, conf: float = 0.25):
@@ -316,17 +409,19 @@ def yolo_mask_fn(weights: str, conf: float = 0.25):
 
 def build_dataloader(
     images_dir, *, masks_dir=None, yolo_weights=None, img_size=224,
-    batch_size=16, workers=2, shuffle=True,
+    batch_size=16, workers=2, shuffle=True, depth_dir=None, crop=False, relief=False,
 ) -> DataLoader:
     """Build a DataLoader of (image, wound_mask). Live YOLO masks force workers=0
-    (the model is not fork-safe across worker processes)."""
+    (the model is not fork-safe across worker processes). ``depth_dir`` stacks a
+    precomputed depth channel (2.5D input); ``crop`` zooms to the padded wound box."""
     mask_fn = None
     if masks_dir is None:
         if not yolo_weights:
             raise ValueError("give --masks (a mask dir) or --yolo-weights (live masks)")
         mask_fn = yolo_mask_fn(yolo_weights)
         workers = 0
-    dataset = WoundJepaDataset(images_dir, masks_dir=masks_dir, mask_fn=mask_fn, img_size=img_size)
+    dataset = WoundJepaDataset(images_dir, masks_dir=masks_dir, mask_fn=mask_fn,
+                               img_size=img_size, depth_dir=depth_dir, crop=crop, relief=relief)
     return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle,
                       num_workers=workers, drop_last=True)
 
@@ -334,14 +429,25 @@ def build_dataloader(
 # --------------------------------------------------------------------------- #
 # Training loop (skeleton)
 # --------------------------------------------------------------------------- #
-def train(cfg: JepaConfig, loader, *, epochs: int, lr: float, device: str) -> MaskGuidedJEPA:
-    """Minimal loop. TODO on the pod: AdamW + cosine warmup, AMP, ckpt, logging."""
+def train(cfg: JepaConfig, loader, *, epochs: int, lr: float, device: str,
+          step_log: Path | None = None) -> MaskGuidedJEPA:
+    """Minimal loop. TODO on the pod: AdamW + cosine warmup, AMP, ckpt, logging.
+
+    ``step_log`` (optional CSV) records every step's loss as ``epoch,step,loss`` so
+    per-step (not just per-epoch) training can be inspected after the fact.
+    """
     model = MaskGuidedJEPA(cfg).to(device)
     opt = torch.optim.AdamW(
         list(model.encoder.parameters()) + list(model.predictor.parameters()), lr=lr
     )
     n_target = max(1, cfg.num_patches // 8)
     n_context = cfg.num_patches // 2
+    log = None
+    if step_log is not None:
+        step_log.parent.mkdir(parents=True, exist_ok=True)
+        log = step_log.open("w")
+        log.write("epoch,step,loss\n")
+    global_step = 0
     for epoch in range(epochs):
         running, n = 0.0, 0
         for images, wound_masks in loader:
@@ -356,9 +462,14 @@ def train(cfg: JepaConfig, loader, *, epochs: int, lr: float, device: str) -> Ma
             loss.backward()
             opt.step()
             model.update_target()
+            global_step += 1
             running += loss.item()
             n += 1
+            if log is not None:
+                log.write(f"{epoch + 1},{global_step},{loss.item():.5f}\n")
         print(f"epoch {epoch + 1}/{epochs}  loss={running / max(n, 1):.4f}")
+    if log is not None:
+        log.close()
     return model
 
 
@@ -402,6 +513,11 @@ def main() -> None:
     ap.add_argument("--epochs", type=int, default=100)
     ap.add_argument("--lr", type=float, default=1e-3)
     ap.add_argument("--workers", type=int, default=2)
+    ap.add_argument("--depth", type=Path, help="Directory of precomputed depth PNGs → 2.5D (RGB+depth) input.")
+    ap.add_argument("--crop", action="store_true", help="Zoom to the padded wound box so the wound fills the frame.")
+    ap.add_argument("--relief", action="store_true", help="Add a MinIP/MIP relief channel from depth (needs --depth).")
+    ap.add_argument("--vic", type=float, default=0.0, help="Anti-collapse variance weight (e.g. 1.0).")
+    ap.add_argument("--step-log", type=Path, help="CSV to record per-step loss (epoch,step,loss).")
     ap.add_argument("--out", type=Path, default=Path("runs_jepa/jepa_encoder.pt"),
                     help="Where to save the pre-trained encoder.")
     ap.add_argument("--device", default=_default_device())
@@ -414,13 +530,17 @@ def main() -> None:
     if not args.images:
         raise SystemExit("give --images DIR (+ --masks DIR or --yolo-weights FILE), or --smoke.")
 
-    cfg = JepaConfig(img_size=args.img_size)
+    # Channels: 3 (RGB) + 1 (depth) + 1 (relief), depending on flags.
+    in_chans = 3 + (1 if args.depth else 0) + (1 if (args.relief and args.depth) else 0)
+    cfg = JepaConfig(img_size=args.img_size, in_chans=in_chans, vic_weight=args.vic)
     loader = build_dataloader(
         args.images, masks_dir=args.masks, yolo_weights=args.yolo_weights,
         img_size=args.img_size, batch_size=args.batch, workers=args.workers,
+        depth_dir=args.depth, crop=args.crop, relief=args.relief,
     )
+    print(f"crop={args.crop}  vic={args.vic}  relief={args.relief}  in_chans={cfg.in_chans}")
     print(f"device={args.device}  images={len(loader.dataset)}  batches/epoch={len(loader)}")
-    model = train(cfg, loader, epochs=args.epochs, lr=args.lr, device=args.device)
+    model = train(cfg, loader, epochs=args.epochs, lr=args.lr, device=args.device, step_log=args.step_log)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     torch.save(model.encoder.state_dict(), args.out)
     print(f"saved encoder -> {args.out}  (attach a grading head in stage 3)")
