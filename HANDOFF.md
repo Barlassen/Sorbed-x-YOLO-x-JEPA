@@ -56,6 +56,22 @@ yoksa 6 denemenin en iyisini seçmekten gelen iyimser yanlılık mı? Doğrulama
 > Çıkan JSON'u mentör raporuna ekle. (Ön-işleme bayrakları JEPA ön-eğitimiyle
 > **birebir** aynı olmalı — probe ile aynı `--crop/--depth/--relief`.)
 
+> **HYPERPARAMETER TARAMASI (kod hazır, laptop'ta koşulacak):**
+> `training/sweep_jepa.py` yazıldı ve push'landı. "6 elle deneme"yi tek, kayıtlı,
+> tekrar-üretilebilir artefakta çeviriyor: bir `(lr, vic)` ızgarasındaki her kombinasyon
+> için JEPA'yı eğitir, doku probuyla (`train_tissue_probe`'un birebir eval'i) macro-F1
+> ölçer, random-init referansıyla birlikte CSV+JSON'a en-iyi-önce sıralı döker, en iyi
+> encoder'ı kaydeder. (lr, vic) dışındaki her şey + seed sabit → satırlar arası fark
+> hyperparameter'a atfedilebilir. Kazanan yine ızgara maksimumu — güvenmeden önce
+> `validate_tissue_probe.py` (çok-seed + bootstrap) ile doğrula. Koş:
+> ```bash
+> python -m training.sweep_jepa \
+>     --images data/rgbd_pool/images --masks data/rgbd_pool/masks --depth data/rgbd_pool/depth \
+>     --crop --relief --tissue-depth data/rgbd_tissue_labeled/depth \
+>     --lrs 1e-3 3e-4 1e-4 --vics 0.0 1.0 4.0 --epochs 30 \
+>     --out runs_jepa/sweep.json --save-best runs_jepa/jepa_best.pt
+> ```
+
 **Diğer açık başlıklar:**
 - Derinlik/relief'i **evrelemede** dene (dokuda değil — derinlik oraya daha uygun,
   çünkü Evre 3↔4 derinliğe bağlı; doku ise renk işi).
