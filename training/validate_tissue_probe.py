@@ -189,28 +189,30 @@ def run(args) -> None:
             "bootstrap": args.bootstrap, "tissue_ids": tissue_ids,
         },
         "jepa_f1": jepa_f1,
-        "random_seeds": {str(s): sc for s, sc in zip(args.seeds, rand_scores)},
+        "random_seeds": {str(s): sc for s, sc in zip(args.seeds, rand_scores, strict=True)},
         "random_summary": {"mean": r_mean, "std": r_std,
                            "min": float(rand.min()), "max": float(rand.max()), "z_jepa": z},
     }
     if args.bootstrap > 0:
-        jepa_ci = _bootstrap_ci(jepa_preds, te_j, tissue_ids, n_boot=args.bootstrap, seed=args.boot_seed)
+        nb, bs = args.bootstrap, args.boot_seed
+        jepa_ci = _bootstrap_ci(jepa_preds, te_j, tissue_ids, n_boot=nb, seed=bs)
         # Compare against the median-scoring random seed: a representative baseline.
         med_seed = args.seeds[int(np.argsort(rand_scores)[len(rand_scores) // 2])]
         rand_preds, rand_te = rand_preds_by_seed[med_seed]
-        rand_ci = _bootstrap_ci(rand_preds, rand_te, tissue_ids, n_boot=args.bootstrap, seed=args.boot_seed)
-        delta = _paired_delta(jepa_preds, rand_preds, te_j, tissue_ids,
-                              n_boot=args.bootstrap, seed=args.boot_seed)
+        rand_ci = _bootstrap_ci(rand_preds, rand_te, tissue_ids, n_boot=nb, seed=bs)
+        delta = _paired_delta(jepa_preds, rand_preds, te_j, tissue_ids, n_boot=nb, seed=bs)
         report["bootstrap"] = {
             "jepa_ci95": jepa_ci,
             "random_ci95": {"seed": med_seed, **rand_ci},
             "paired_delta_ci95": {"vs_seed": med_seed, **delta},
         }
-        print(f"\nbootstrap 95% CI  (B={args.bootstrap}, image-level resampling)")
-        print(f"  JEPA          : {jepa_ci['mean']:.3f}  [{jepa_ci['lo']:.3f}, {jepa_ci['hi']:.3f}]")
-        print(f"  random (s={med_seed}) : {rand_ci['mean']:.3f}  [{rand_ci['lo']:.3f}, {rand_ci['hi']:.3f}]")
-        print(f"  paired Δ      : {delta['mean']:+.3f}  [{delta['lo']:+.3f}, {delta['hi']:+.3f}]  "
-              f"P(Δ>0)={delta['p_gt0']:.3f}")
+        def _fmt(d):
+            return f"{d['mean']:+.3f}  [{d['lo']:+.3f}, {d['hi']:+.3f}]"
+
+        print(f"\nbootstrap 95% CI  (B={nb}, image-level resampling)")
+        print(f"  JEPA        : {_fmt(jepa_ci)}")
+        print(f"  rand s={med_seed}    : {_fmt(rand_ci)}")
+        print(f"  paired Δ    : {_fmt(delta)}  P(Δ>0)={delta['p_gt0']:.3f}")
         verdict = (z > 1.0) and (delta["lo"] > 0.0)
         print(f"\nVERDICT: JEPA > random is {'SUPPORTED' if verdict else 'NOT established'} "
               f"(needs z>1 and paired Δ CI above 0).")
@@ -223,16 +225,16 @@ def run(args) -> None:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Multi-seed + bootstrap validation of the JEPA tissue probe.")
+    ap = argparse.ArgumentParser(description="Multi-seed + bootstrap validation of the probe.")
     ap.add_argument("--weights", default="runs_jepa/jepa_best.pt", help="JEPA encoder weights.")
     ap.add_argument("--img-size", type=int, default=224)
-    ap.add_argument("--depth", type=Path, help="Depth-PNG dir → 2.5D input (match pretraining).")
-    ap.add_argument("--crop", action="store_true", help="Crop to the wound box (match pretraining).")
-    ap.add_argument("--relief", action="store_true", help="Add MinIP/MIP relief channel (match pretraining).")
+    ap.add_argument("--depth", type=Path, help="Depth-PNG dir, 2.5D input (match pretraining).")
+    ap.add_argument("--crop", action="store_true", help="Crop to the wound box (match pretrain).")
+    ap.add_argument("--relief", action="store_true", help="Add relief channel (match pretraining).")
     ap.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2, 3, 4],
                     help="Seeds for the random-init baseline distribution.")
     ap.add_argument("--bootstrap", type=int, default=2000, help="Bootstrap resamples (0 disables).")
-    ap.add_argument("--boot-seed", type=int, default=12345, help="RNG seed for the bootstrap itself.")
+    ap.add_argument("--boot-seed", type=int, default=12345, help="RNG seed for the bootstrap.")
     ap.add_argument("--out", type=Path, help="Write the full report as JSON.")
     ap.add_argument("--device", default="mps" if torch.backends.mps.is_available() else "cpu")
     run(ap.parse_args())
