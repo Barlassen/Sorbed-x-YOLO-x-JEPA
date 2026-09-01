@@ -33,6 +33,29 @@ export SSL_CERT_FILE=$(python -c 'import certifi;print(certifi.where())')
   `train_tissue_probe.py`, `train_grade_jepa.py`, `prepare_yolo_seg.py`,
   `yolo_backend.py`, `yolo_depth.py` (Sorbed'de derinlik varsayılanı artık "yolo").
 
+## 📊 SONUÇ (2026-09-01) — doğrulama koşuldu, dürüst cevap alındı
+**Tarama (`sweep_jepa.py`, 9 hücre, 30 epoch, 2.5D+relief, seed 0):** en iyi
+**lr=3e-4, vic=4.0 → macro-F1 0.542** (tek random referansı 0.484, Δ +0.058).
+Kritik desen: **vic (çökme freni) belirleyici** — üç `vic=0` satırı dibin dibinde
+(0.42–0.48), vic=4 en iyiyi veriyor. Tek başına lr ya da vic yetmiyor; lr=3e-4+vic=0
+en kötü (0.420), lr=3e-4+vic=4 en iyi (0.542). → *"JEPA'nın faydası çökme-önleyici
+düzenlileştirmeye bağlı."* (`runs_jepa/sweep.json` + `.csv`)
+
+**Doğrulama (`validate_tissue_probe.py`, jepa_best.pt, 5 seed, bootstrap 2000):**
+- JEPA = **0.537** (deterministik).
+- random 5 seed: **ort=0.514, std=0.039, min=0.477, max=0.564** → random tek sayı değil,
+  bir bulut; en iyi random çekilişleri (0.552, 0.564) JEPA'yı geçiyor. Taramadaki 0.484
+  şanssız-düşük bir çekilişmiş.
+- JEPA vs random ort: **+0.023, z ≈ 0.59** (eşik z>1 sağlanmadı).
+- Eşleştirilmiş bootstrap: **Δ = +0.028, %95 CI [−0.009, +0.063], P(Δ>0)=0.932**.
+- **VERDICT: NOT established.** JEPA pozitife eğiliyor (%93 önde) ama bu ölçekte kanıt
+  yok — CI 0'ı içeriyor, z<1. (`runs_jepa/tissue_validation.json`)
+
+**Yorum:** Tek şanslı sayı (0.542 vs 0.484) bizi yanıltabilirdi; doğru istatistik
+"neredeyse anlamlı ama değil" diyor. Sınır bir bug değil, **ölçek** — HANDOFF'un ana
+bulgusunu doğruluyor. Yayınlanabilir, dürüst bir sonuç. Bunu sınırdan çıkaracak tek
+şey **daha fazla veri** → yeni yara fotoğrafları işleniyor (aşağıya bak).
+
 ## 🔸 Yarım kalan / sıradaki iş
 **Ana yarım iş — tuned ayarı doğrulama:** vic=4, lr=3e-4 ile çıkan 0.517 gerçek mi,
 yoksa 6 denemenin en iyisini seçmekten gelen iyimser yanlılık mı? Doğrulama gerek:
