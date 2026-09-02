@@ -1,7 +1,50 @@
 # Devir Teslim — Sorbed × YOLO × JEPA
 
 > Yeni bir sohbette / oturumda kaldığımız yerden devam etmek için özet.
-> Son güncelleme: 2026-08-25.
+> Son güncelleme: 2026-09-02.
+
+## 🆕 SON OTURUM (2026-09-02) — daha çok + alan-içi veri denendi, fine-tuning aracı eklendi
+
+**Yeni veri katıldı (bası yarası):** `anonymized_wound_images` (32 vaka, **732 gerçek
+bası yarası fotoğrafı** — koksiks/gluteal/sırt; projedeki en alan-içi veri, etiketsiz).
+`precompute_rgbd` ile maske+derinlik üretildi (**732'nin 524'ünde yara**, %72 — ayak
+yarası segmenter'ının bası yaralarına iyi genellediğini gösterir). Ön-eğitim havuzu
+**1410 → 2142** (+%52). Eski 1410 sonuçları `runs_jepa/sweep_1410.*` olarak yedeklendi.
+
+**Tuned JEPA yeniden eğitildi** (2142 havuz, vic=4.0 lr=3e-4, 30 epoch, MPS) →
+`runs_jepa/jepa_best.pt`. Doğrulama (`validate_tissue_probe`, 5 seed + 2000 bootstrap)
+→ `runs_jepa/tissue_validation.json`.
+
+**Sonuç (dürüst NEGATİF):** daha çok + alan-içi veri, dondurulmuş doku probunda farkı
+kapatmadı, hatta sildi:
+
+| | Önce (1410) | Sonra (2142, +732 bası yarası) |
+|---|---|---|
+| JEPA macro-F1 | 0.537 | 0.521 |
+| random ort. | 0.514 | 0.518 |
+| JEPA − random | +0.023 (z≈0.59) | **+0.003 (z≈0.07)** |
+| eşleştirilmiş Δ %95 CI | +0.028 [−0.009,+0.063] | **+0.002 [−0.041,+0.045]** |
+| P(Δ>0) | 0.932 | **0.539** |
+| Verdict | NOT established | NOT established |
+
+**Neden:** eklenen veri **bası yarası**, ama doku test seti **ayak yarası** (DFUTissue)
+→ test-alan uyumsuzluğu; ayrıca JEPA 0.537→0.521 gürültü içinde. Temel bulgu (linear-probe
++ minik model + küçük/alan-dışı test → JEPA ≈ random) pekişti. Yayınlanabilir dürüst bir
+negatif sonuç.
+
+**Yeni araç: `training/finetune_tissue_probe.py`** (push'landı). Dondurulmuş probe'un
+adil olmayabileceğini test eder: encoder'ın son N bloğunu **çözüp** uçtan uca fine-tune
+eder, JEPA-init vs random-init'i **aynı** ön-işleme + çok-seed + bootstrap ile kıyaslar.
+SSL'in faydası çoğu zaman ancak fine-tune'da görünür. Koş (laptop'ta):
+```bash
+python -m training.finetune_tissue_probe \
+    --weights runs_jepa/jepa_best.pt --crop --depth data/rgbd_tissue_labeled/depth \
+    --relief --unfreeze-blocks 1 --epochs 40 --seeds 0 1 2 3 4 --bootstrap 2000 \
+    --out runs_jepa/tissue_finetune.json
+```
+Not: Test seti ~16 görüntü olduğu için `--unfreeze-blocks` küçük tutuldu (varsayılan 1;
+0=sadece head, 6=tam). `--unfreeze-blocks 2` de denenebilir. **SONRAKİ ADIM: bunu koşup
+sonucu yorumlamak.**
 
 ## Proje
 Bası yarası (bedsore) fotoğrafından **evre** ve **doku** analizi yapan **Sorbed**
