@@ -43,8 +43,34 @@ python -m training.finetune_tissue_probe \
     --out runs_jepa/tissue_finetune.json
 ```
 Not: Test seti ~16 görüntü olduğu için `--unfreeze-blocks` küçük tutuldu (varsayılan 1;
-0=sadece head, 6=tam). `--unfreeze-blocks 2` de denenebilir. **SONRAKİ ADIM: bunu koşup
-sonucu yorumlamak.**
+0=sadece head, 6=tam).
+
+**ÖNEMLİ — ölçüm aleti düzeltmesi:** ilk sürüm skoru fine-tune'un kendi torch başlığıyla
+hesaplıyordu ve doğrulanmış dondurulmuş probe'u yeniden üretemiyordu (unfreeze=0'da
+JEPA 0.28/random 0.43 verip JEPA'yı haksız cezalandırıyordu → sahte "JEPA daha kötü"
+sonucu). Düzeltildi: encoder fine-tune edilir (torch başlığı sadece gradyan taşıyıcı),
+skor **her zaman** `validate_tissue_probe`'un sklearn probe'undan gelir. Artık
+`--unfreeze-blocks 0` yerleşik bir sağlama: encoder değişmediği için tam olarak
+dondurulmuş probe'u (JEPA 0.521 / random 0.518) yeniden üretir — doğrulandı ✅.
+
+**Fine-tune merdiveni sonucu (2026-09-02, 5 seed + 2000 bootstrap, sklearn ölçümü):**
+
+| Çözülen blok | JEPA-init | random-init | Δ (JEPA−random) | Δ>0 seed | P(Δ>0) |
+|---|---|---|---|---|---|
+| 0 (dondurulmuş) | 0.521 (std 0.000) | 0.518 (std 0.039) | +0.003 | 3/5 | — |
+| 1 | 0.531 (std 0.008) | 0.515 (std 0.039) | +0.017 | 3/5 | 0.77 |
+| 2 | 0.525 (std 0.014) | 0.496 (std 0.052) | +0.029 | 4/5 | 0.76 |
+
+Desen: **JEPA'nın öne geçmesi uyarladıkça artıyor** (+0.003→+0.029) ve JEPA **çok daha
+kararlı** (std ~0.01 vs 0.04–0.05); random, fazla uyarlamada (az veri) ezberleyip
+bozuluyor. Yani JEPA az-veri fine-tune'unda daha iyi + daha güvenilir bir başlangıç.
+**AMA** her basamakta bootstrap %95 CI hâlâ 0'ı içeriyor, P(Δ>0)~0.76 → istatistiksel
+olarak **kesinleşmedi**; ölçek sınırı bulgusu sürüyor. Tutarlı ama ispatlanmamış olumlu
+sinyal — dürüst ve yayınlanabilir. (JSON: `runs_jepa/tissue_finetune_b{0,1,2}.json`.)
+
+**Sonraki olası adımlar:** (1) tam fine-tune (`--unfreeze-blocks 6`) merdivenin ucu için;
+(2) asıl kaldıraç — bası-yarası için **etiketli** değerlendirme seti (şu an test ayak
+yarası/DFUTissue, eklenen veri bası yarası → alan uyumsuzluğu); (3) evrelemede derinlik/relief.
 
 ## Proje
 Bası yarası (bedsore) fotoğrafından **evre** ve **doku** analizi yapan **Sorbed**
