@@ -30,19 +30,22 @@ def main() -> None:
     ap.add_argument("--conf", type=float, default=0.25)
     ap.add_argument("--masks", action="store_true", help="Also write wound masks (default: yes).")
     ap.add_argument("--no-masks", dest="masks", action="store_false")
-    ap.set_defaults(masks=True)
+    ap.add_argument("--no-depth", dest="depth", action="store_false",
+                    help="Skip depth (e.g. to regenerate only masks at a new --conf).")
+    ap.set_defaults(masks=True, depth=True)
     args = ap.parse_args()
 
     from ultralytics import YOLO
 
     seg = YOLO(args.seg_weights) if args.masks else None
-    depth = YOLO(args.depth_model)
+    depth = YOLO(args.depth_model) if args.depth else None
 
     mask_dir = args.out / "masks"
     depth_dir = args.out / "depth"
     if args.masks:
         mask_dir.mkdir(parents=True, exist_ok=True)
-    depth_dir.mkdir(parents=True, exist_ok=True)
+    if args.depth:
+        depth_dir.mkdir(parents=True, exist_ok=True)
 
     paths = sorted(p for p in Path(args.images).iterdir() if p.suffix.lower() in _EXTS)
     found = 0
@@ -52,13 +55,14 @@ def main() -> None:
             continue
         h, w = bgr.shape[:2]
 
-        # Depth → per-image min-max to [0,255] uint8 (relative depth is what we use).
-        dr = depth.predict(bgr, verbose=False)[0].depth.data.cpu().numpy().astype(np.float32)
-        if dr.shape != (h, w):
-            dr = cv2.resize(dr, (w, h), interpolation=cv2.INTER_LINEAR)
-        rng = float(np.ptp(dr))
-        d8 = (255 * (dr - dr.min()) / (rng + 1e-9)).astype(np.uint8)
-        cv2.imwrite(str(depth_dir / f"{p.stem}.png"), d8)
+        if args.depth:
+            # Depth → per-image min-max to [0,255] uint8 (relative depth is what we use).
+            dr = depth.predict(bgr, verbose=False)[0].depth.data.cpu().numpy().astype(np.float32)
+            if dr.shape != (h, w):
+                dr = cv2.resize(dr, (w, h), interpolation=cv2.INTER_LINEAR)
+            rng = float(np.ptp(dr))
+            d8 = (255 * (dr - dr.min()) / (rng + 1e-9)).astype(np.uint8)
+            cv2.imwrite(str(depth_dir / f"{p.stem}.png"), d8)
 
         if args.masks:
             r = seg.predict(bgr, conf=args.conf, verbose=False)[0]
@@ -73,8 +77,12 @@ def main() -> None:
         if (i + 1) % 200 == 0:
             print(f"  {i + 1}/{len(paths)} done")
 
-    print(f"depth for {len(paths)} imgs -> {depth_dir}"
-          + (f"; masks ({found} with a wound) -> {mask_dir}" if args.masks else ""))
+    parts = []
+    if args.depth:
+        parts.append(f"depth for {len(paths)} imgs -> {depth_dir}")
+    if args.masks:
+        parts.append(f"masks ({found} with a wound, conf={args.conf}) -> {mask_dir}")
+    print("; ".join(parts) if parts else "nothing to do (both --no-masks and --no-depth)")
 
 
 if __name__ == "__main__":
