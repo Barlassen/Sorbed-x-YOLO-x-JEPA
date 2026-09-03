@@ -72,6 +72,37 @@ sinyal — dürüst ve yayınlanabilir. (JSON: `runs_jepa/tissue_finetune_b{0,1,
 (2) asıl kaldıraç — bası-yarası için **etiketli** değerlendirme seti (şu an test ayak
 yarası/DFUTissue, eklenen veri bası yarası → alan uyumsuzluğu); (3) evrelemede derinlik/relief.
 
+## 🔴 MASKE KALİTESİ BULGUSU (2026-09-02) — Ario haklı çıktı, JEPA yükseldi
+
+Ario "maskelere bak, Dice'larda sıkıntı var" dedi. Yeni araç `training/check_mask_quality.py`
+(görsel montaj + GT'ye karşı Dice) ile YOLO yara maskelerini denetledik. **Maskeler kötü:**
+
+| DFUTissue | boş tahmin | ort. Dice | Dice<0.5 |
+|---|---|---|---|
+| Test (conf 0.25) | %31 | 0.32 | %56 |
+| TrainVal (conf 0.25) | %31 | 0.27 | %78 |
+| Test (**conf 0.05**) | **%12** | **0.46** | %44 |
+
+conf'u 0.25→0.05 yapmak boş tahmini yarıya indirdi, Dice'ı belirgin yükseltti. `precompute_rgbd`'ye
+`--no-depth` eklendi (sadece maskeyi hızlı yeniden üretmek için). Havuz maskeleri conf 0.05 ile
+yeniden üretildi (`data/rgbd_pool_c05/masks`), tuned JEPA temiz maskeyle yeniden eğitildi
+(`runs_jepa/jepa_best_c05.pt`), doku probu tekrar koşuldu:
+
+| Havuz maskesi | JEPA | random ort | Δ | P(Δ>0) |
+|---|---|---|---|---|
+| conf 0.25 (2142) | 0.521 | 0.518 | +0.002 | 0.54 |
+| **conf 0.05 (2142)** | **0.545** | 0.518 | **+0.027** | **0.928** |
+
+**Sadece maske kalitesini düzeltince** (aynı veri/model/test), JEPA 0.521→**0.545** (şimdiye kadarki
+en iyi), JEPA−random farkı +0.002→**+0.027**, P(Δ>0) 0.54→**0.93**. Yani "JEPA ≈ random"ın bir
+kısmı **ölçek değil, bozuk maske (bug)** kaynaklıymış — mask-güdümlü JEPA aç kalıyordu. Yine de
+formel anlamlılık kılpayı geçilmedi (CI [−0.012,+0.062], z=0.68); maske hâlâ Dice ~0.46, daha iyi
+segmentasyon çizgiyi geçirebilir. (JSON: `runs_jepa/tissue_validation_c05.json`.)
+
+**Sıradaki:** (a) daha düşük conf (0.01–0.02) ile maskeyi daha da iyileştir; (b) **segmenter'ı daha
+çok veriyle yeniden eğit** (ör. FUSeg + DFUTissue yara maskeleri) → maske Dice'ını yükselt → JEPA'yı
+tekrar dene. Hedef: farkı anlamlılık çizgisinin üstüne taşımak.
+
 ## Proje
 Bası yarası (bedsore) fotoğrafından **evre** ve **doku** analizi yapan **Sorbed**
 sistemine **YOLO26** (yara tespiti + monoküler derinlik) ve **mask-güdümlü JEPA**
