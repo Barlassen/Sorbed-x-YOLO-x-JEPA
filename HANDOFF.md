@@ -99,9 +99,43 @@ kısmı **ölçek değil, bozuk maske (bug)** kaynaklıymış — mask-güdüml�
 formel anlamlılık kılpayı geçilmedi (CI [−0.012,+0.062], z=0.68); maske hâlâ Dice ~0.46, daha iyi
 segmentasyon çizgiyi geçirebilir. (JSON: `runs_jepa/tissue_validation_c05.json`.)
 
-**Sıradaki:** (a) daha düşük conf (0.01–0.02) ile maskeyi daha da iyileştir; (b) **segmenter'ı daha
-çok veriyle yeniden eğit** (ör. FUSeg + DFUTissue yara maskeleri) → maske Dice'ını yükselt → JEPA'yı
-tekrar dene. Hedef: farkı anlamlılık çizgisinin üstüne taşımak.
+**Denenen sıradaki adımlar ve sonuçları:**
+- **(a) Daha düşük conf → tükendi.** conf 0.02 ve 0.01, DFUTissue Test'te 0.05 ile aynı (%12 boş,
+  Dice ~0.47'de plato). 0.05'in altında kazanç yok; conf lever'ı bitti, en iyi hali `jepa_best_c05` (0.545).
+- **(b) Segmenter'ı DFUTissue ile fine-tune → BAŞARISIZ (bozdu).** `prepare_dfutissue_seg.py` ile
+  DFUTissue TrainVal'i YOLO-seg formatına çevirip mevcut ağırlığı fine-tune ettik (`yolo segment train`,
+  80 epoch). Sonuç maske **kötüleşti**: DFUTissue Test'te boş %12→**%50**, Dice 0.46→**0.27** (medyan 0).
+  **Sebep:** DFUTissue etiketleri **doku bölgeleri** (fibrin/granülasyon), temiz **yara sınırı** değil;
+  yanlış türde hedefle + 94 küçük görüntü FUSeg'in iyi yara-bulmasını bozdu. Bu segmenter **atıldı**
+  (`runs/segment/runs/segment/.../yolo26n_dfu_ft-2`). Dürüst negatif bulgu: doku-etiketiyle yara
+  segmenter'ı eğitilmez.
+
+**Gerçek kalan kaldıraç — SAM (sıradaki büyük iş, henüz yapılmadı):** maske Dice tavanı (~0.47) minik
+FUSeg-YOLO'nun **yetenek sınırı**, özellikle etiketsiz bası yaralarında. Doğru araç: **düz SAM**
+(doğal RGB, 2B, kutu-promptlu) ile **YOLO kutusu → SAM hassas maske** boru hattı — etiket gerektirmez.
+(MedSAM/MedSAM2 uygun değil: MedSAM radyoloji-ağırlıklı → RGB yara fotoğrafında domain gap; MedSAM2'nin
+gücü 3B/video yayma → bizde 2B tek fotoğraf, işe yaramaz.) Havuzu SAM ile yeniden maskele → JEPA'yı
+tekrar dene → hedef: farkı anlamlılık çizgisinin üstüne taşımak.
+
+## 📋 OTURUM SKOR ÖZETİ (2026-09-02) — hepsi bir arada
+**Doku probu, JEPA vs random (dondurulmuş, 5 seed + 2000 bootstrap):**
+
+| Ön-eğitim | JEPA | random ort | Δ | P(Δ>0) |
+|---|---|---|---|---|
+| 1410 (ayak) | 0.537 | 0.514 | +0.028 | 0.93 |
+| 2142 karışık, conf 0.25 | 0.521 | 0.518 | +0.002 | 0.54 |
+| 732 sadece-bası, conf 0.25 | 0.505 | 0.518 | −0.009 | 0.43 |
+| **2142 karışık, conf 0.05** | **0.545** | 0.518 | **+0.027** | **0.928** |
+
+**Fine-tune merdiveni, JEPA-init vs random-init:** unfreeze 0/1/2 → Δ +0.003 / +0.017 / +0.029
+(JEPA tutarlı önde + çok daha kararlı std ~0.01 vs 0.04-0.05; anlamlılık geçilmedi).
+
+**Maske Dice (DFUTissue Test):** YOLO conf0.25 → 0.32 (%31 boş); conf0.05 → 0.46 (%12 boş, en iyi);
+DFUTissue-fine-tune → 0.27 (%50 boş, atıldı).
+
+**Genel dürüst sonuç:** Bu ölçekte JEPA ≈ random; en güçlü tek hamle **maske kalitesini düzeltmek**
+oldu (JEPA 0.521→0.545, P 0.54→0.93). Sınır kısmen bug (maske), kısmen ölçek. Anlamlılık henüz yok;
+bir sonraki kaldıraç SAM ile daha iyi maske.
 
 ## Proje
 Bası yarası (bedsore) fotoğrafından **evre** ve **doku** analizi yapan **Sorbed**
