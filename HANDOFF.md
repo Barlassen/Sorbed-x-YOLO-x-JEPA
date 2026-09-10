@@ -1,7 +1,105 @@
 # Devir Teslim — Sorbed × YOLO × JEPA
 
 > Yeni bir sohbette / oturumda kaldığımız yerden devam etmek için özet.
-> Son güncelleme: 2026-09-02.
+> Son güncelleme: 2026-09-10.
+
+## SON DEVAM (2026-09-10) — havuz büyütüldü (2142 → 5096), yeni veriler geldi
+
+**Bağlam:** Kullanıcı Gemini araştırmasıyla veri setleri getirdi. Denetim: Gemini'nin
+"bulduğu"nun çoğu zaten `training/fetch_corpus.py` registry'sinde/diskinde. Asıl
+kaçırılan kaldıraç: diskteki veriyi havuza tam katmamışız (piid 1091 hiç girmemiş).
+
+**Yeni indirilen veriler** (`~/Downloads`, detay hafıza notu `sorbed-new-datasets-2026-09`):
+- `results.zip` = **WoundsDB** (chronicwounddatabase.eu, lisanslı): 46 vaka, 158 RGB +
+  **64 gerçek derinlik** + 79 termal + stereo/mesh. Derinlik kalibrasyonu için altın
+  standart (İş Kolu D). **Git'e girmez, dağıtılmaz.** Henüz işlenmedi.
+- **roboflow fr7kn** (CC BY 4.0): 2013 bası yarası + evre kutusu (stage1-4, DTI/unstage YOK).
+  `data/corpus/roboflow_fr7kn/` altına açıldı. Etiket kalitesi belirsiz (eskara stage2).
+- **ambatron** wound-classification: 929, yara TÜRÜ (BG,D,N,P,S,V), çoğu alan-dışı → düşük öncelik.
+
+**Yeni araç `training/build_pool.py` (+ tests/test_build_pool.py, 5 test geçti):**
+Dağınık kaynakları tek havuza indirir. `training/dedup.py`'nin dHash'ini yeniden kullanır.
+İki AYRI eşik: `--leak-hamming` (sıkı, test sızıntısı için "aynı fotoğraf") ve `--hamming`
+(dedup). Symlink'leri tarama dışı bırakır (eski havuzun 732 gerçek dosyasını almak için).
+`Labeled` (doku test, 110) dHash ile dışlanır → sızıntı 0 doğrulandı.
+
+**Kurulan yeni havuz `data/rgbd_pool_v2/images` (5096, hamming 2 = neredeyse-birebir dedup):**
+fr7kn 1874 + piid 1086 + azh_fuseg 985 + pressure 575 + dfutissue 372 + kaggle 204.
+→ **Alan-içi (bası yarası) ağırlıklı: ~3739 bası vs 1357 ayak** (eski havuz tersineydi).
+Dedup duyarlılığı: hamming 0→264, 2→561, 4→757, 6→921 elenen. Havuz-içi bölme olmadığı
++ probe testi zaten dışlandığı için sıkı eşik (2) seçildi = veri kaybını en aza indir.
+Eski `data/rgbd_pool` (2142) ve checkpoint'ler DOKUNULMADI (geri dönülebilir).
+
+**SIRADAKİ (kullanıcı onayı bekliyor — AĞIR, saatler):** yeni havuz için maske+derinlik
+üret (`precompute_rgbd --images data/rgbd_pool_v2/images --out data/rgbd_pool_v2 --conf 0.05`),
+sonra `train_jepa` ile yeniden eğit + `validate_tissue_probe` ile ölç. Hedef: P(Δ>0) 0.93 → >0.95.
+Detaylı plan artefaktı: https://claude.ai/code/artifact/ce283b86-225e-4df5-9f29-83b87646c433
+build_pool.py + testi henüz COMMIT edilmedi.
+
+## SON DEVAM (2026-09-08) — ayrı yüzey sınıfları, anotasyon v2
+
+Kullanıcı açık/kapalı ayrımını kabul etti. Sekiz pilot görüntü yeniden görsel
+incelendi ve **bütünlüğü korunmuş lezyonlu deri / açık yüzey / slough-eskarla
+örtülü yüzey / belirsiz** olarak ayrı hedefler üretildi.
+
+- v2: `data/annotations/pressure_injury_v2/`; v1 sonuçları korunuyor.
+- İnceleme: `pilot/review.html`, `pilot/surface_qa.png`; kararlar
+  `pilot/surface_drafts.json`, orijinal piksel maskeleri `pilot/surface_masks/`.
+- ID'ler: 0=background, 1=intact_lesion, 2=open_surface, 3=covered_surface,
+  255=unknown/ignore. Kapalı deri **lezyon eksi açık yara** ile hesaplanmıyor.
+- Pilot: kapalı 2, açık 7, örtülü 1, belirsiz 7 görüntüde var (çoklu bölgeler).
+  case_002 sarı tabakası bakım materyali olabileceği için v2'de belirsiz bırakıldı.
+- Yeni kod: `scripts/export_surface_annotations.py`,
+  `training/{surface_labels,train_surface_seg,predict_surface_seg,evaluate_surface_seg}.py`.
+  Tek ortak encoder/decoder ve 4 kanallı yüzey başlığı; 255 kayıptan dışlanır.
+- 11 sentetik test geçti: bilinmeyen pikseller, sınıf çakışması, boş Dice,
+  abstention cezalandırması, hasta/kopya sızıntısı, eğitim→tahmin→değerlendirme.
+- **Hasta verisiyle eğitim yapılmadı.** Uzman onayı ve hasta bazında bölünme yok;
+  eğitim/değerlendirme araçlarının bu koşullarda durduğu kontrol edildi.
+  Yeni yüzey sınıfları için gerçek performans/Dice sonucu henüz yok.
+- Klinik runtime veya evreleme kuralları değiştirilmedi. Yüzey etiketi evreye
+  otomatik çevrilmiyor; mevcut YOLO da bu üç sınıfı henüz tahmin etmiyor.
+- Protokol ve sonraki çalıştırma komutları: `training/SURFACE_ANNOTATIONS.md`.
+  Kalan 724 fotoğrafın anotasyonu hâlâ bekliyor.
+
+## SON OTURUM (2026-09-08) — görsel anotasyon pilotu
+
+Kullanıcı mentorunun önerisiyle Codex'ten **yara sınırı + doku + evre**
+anotasyonu istedi. İlk pilot: **8 farklı vakadan 8 görüntü**, tek tek görsel
+inceleme ve kaba poligon taslakları. **724 görüntü henüz anotasyon bekliyor.**
+YOLO/Sorbed otomatik etiketleri bu pilotta kullanılmadı. Kaynak fotoğraflar değişmedi.
+
+- Yerel veri: `data/annotations/pressure_injury_v1/` (gitignore kapsamında).
+- İnceleme: `pilot/review.html`; statik görsel kontrol: `pilot/qa_overview.png`.
+- Protokol: `PROTOCOL.md`; kaynak taslaklar: `pilot/visual_drafts.json`.
+- Çıktılar: orijinal boyutta lezyon, yara yüzeyi ve sınıf-ID doku PNG'leri;
+  gerekçeli evre JSON'ları ve düzenlenebilir LabelMe poligonları.
+- Exporter: `scripts/export_visual_annotations.py`; boyut, hash, koordinat,
+  yara yüzeyinin lezyon içinde kalması ve PNG round-trip doğrulamaları var.
+- **Tüm etiketler AI taslağı**, uzman onayı yok; eğitim ve ground-truth uygunluğu
+  false. Belirsiz doku 255. `red_surface_unspecified` granülasyon değildir.
+  Anotasyon sınıf-ID'leri DFUTissue ile farklı; doğrudan eğitime bağlanmamalı.
+- Evre adayları: 1 deep_tissue_injury, 2 unstageable, 1 stage_2, 4 indeterminate.
+  Kesin klinik tanı/evre olarak kullanılamaz. Gerekçe ve alternatifler JSON'da.
+
+**Veri bütünlüğü bulgusu:** 732 dosya / 32 vaka klasörü içinde 577 benzersiz
+SHA-256; 87 birebir tekrar grubu, 155 ek kopya. Birebir tekrarlar vaka klasörleri
+arasında geçmiyor. Benzer/yeniden sıkıştırılmış kareler henüz denetlenmedi;
+vaka-hasta eşlemesi de doğrulanmalı. 732 kaynak dosyanın tamamının aynı hash'li
+kopyası `data/rgbd_pool/images` içinde mevcut. Bu nedenle mevcut JEPA
+checkpoint'leriyle bu veriyi hiç görülmemiş bağımsız test diye sunmayın.
+
+**Önceki handoff'a düzeltme:** 6-blok fine-tune zaten koşulmuş:
+`tissue_finetune_b6.json`, JEPA 0.500 / random 0.527. Yalnız bası yarasıyla
+ön-eğitim sonucu `tissue_validation_pi_only.json`: 0.505 / 0.518.
+`seg_ft.log` tamamlanmış DFUTissue fine-tune içeriyor; best checkpoint son
+doğrulama mask mAP50=0.169. Aşağıdaki eski "sıradaki" listeleri tarihsel.
+Sweep ayarları Test skoruyla seçiliyor; aynı Test'te bootstrap seçim yanlılığını
+gidermiyor. Dondurulmuş probe'daki 5 seed, 5 ayrı JEPA ön-eğitimi değil.
+
+**Devam:** pilot konturlarını/doku belirsizliklerini ve evre adaylarını mentorla
+incelemek, düzeltmeleri ayrı bir anotasyon sürümünde korumak; kalan 724 dosyada
+ilerlemeyi inventory üzerinden takip etmek. Henüz veri bölünmesi yapılmadı.
 
 ## 🆕 SON OTURUM (2026-09-02) — daha çok + alan-içi veri denendi, fine-tuning aracı eklendi
 
