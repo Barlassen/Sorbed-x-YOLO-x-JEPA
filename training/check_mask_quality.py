@@ -58,11 +58,19 @@ def _overlay(bgr: np.ndarray, mask: np.ndarray, color) -> np.ndarray:
 
 
 def _predict_mask(seg, bgr, conf: float) -> np.ndarray:
-    """YOLO wound mask, identical inference to precompute_rgbd (0/255 uint8)."""
+    """YOLO wound mask, identical inference to precompute_rgbd (0/255 uint8).
+
+    ``retina_masks=True`` returns masks in the original image frame at full
+    resolution. The default ``masks.data`` lives in the letterboxed inference
+    frame; resizing it straight to (w, h) stretches the stride padding into the
+    image and shifts the mask on aspect ratios that need padding (e.g. 1135x638).
+    """
     h, w = bgr.shape[:2]
-    r = seg.predict(bgr, conf=conf, verbose=False)[0]
+    r = seg.predict(bgr, conf=conf, verbose=False, retina_masks=True)[0]
     if r.masks is not None and len(r.masks.data) > 0:
-        u = cv2.resize(r.masks.data.cpu().numpy().max(0).astype(np.float32), (w, h))
+        u = r.masks.data.cpu().numpy().max(0).astype(np.float32)
+        if u.shape != (h, w):
+            u = cv2.resize(u, (w, h), interpolation=cv2.INTER_NEAREST)
         return (u >= 0.5).astype(np.uint8) * 255
     return np.zeros((h, w), np.uint8)
 
