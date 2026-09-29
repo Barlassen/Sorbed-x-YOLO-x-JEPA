@@ -208,6 +208,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="runs/tissue_ab")
     ap.add_argument("--boot", type=int, default=2000)
+    ap.add_argument("--cnn", nargs="*", default=[], help="B-CNN checkpoints from train_tissue_cnn (one per seed)")
     args = ap.parse_args()
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -236,6 +237,15 @@ def main() -> None:
         "B": lambda im, r: method_b(rf, im, r),
         "trivial(all G)": lambda im, r: np.where(r, G, BG).astype(np.uint8),
     }
+    if args.cnn:
+        from training.train_tissue_cnn import load, predict
+
+        for i, ck in enumerate(args.cnn):
+            net = load(ck)
+            methods[f"B-CNN s{i}"] = lambda im, r, net=net: predict(net, im, r)
+            # exploratory only (vocabulary mapping chosen after seeing the RF result): callus -> slough
+            methods[f"(keşif) B-CNN s{i} kallus->S"] = lambda im, r, net=net: np.where(
+                (lab := predict(net, im, r)) == O, S, lab).astype(np.uint8)
 
     # 2) in-domain sanity: DFUTissue Test (16), wound region from the annotation
     dt = {m: [] for m in methods}
@@ -289,9 +299,9 @@ def main() -> None:
     harr = np.array(human)  # [img, pair, class, 2]
     report["cwdb_R1"]["HUMAN (expert vs expert)"] = fmt(pooled(harr), boot(harr, args.boot))
 
-    # paired A - B difference on the main score (mean of G and S), R1 and R2
-    for setting in R:
-        a, b = np.array(R[setting]["A"]), np.array(R[setting]["B"])
+    # paired A - B difference on the main score (mean of G and S), R1 and R2, for every B variant
+    for setting, bname in [(s_, b_) for s_ in R for b_ in methods if b_.startswith("B")]:
+        a, b = np.array(R[setting]["A"]), np.array(R[setting][bname])
         rng = np.random.default_rng(1)
         diffs = []
         for _ in range(args.boot):
@@ -299,7 +309,7 @@ def main() -> None:
             diffs.append(np.nanmean(pooled(a[idx])[:2]) - np.nanmean(pooled(b[idx])[:2]))
         pa, pb = np.nanmean(pooled(a)[:2]), np.nanmean(pooled(b)[:2])
         diffs = np.array(diffs)
-        report[f"A_minus_B_GS_{setting}"] = {
+        report[f"A_minus_{bname}_GS_{setting}"] = {
             "A": round(float(pa), 3), "B": round(float(pb), 3), "diff": round(float(pa - pb), 3),
             "ci95": [round(float(x), 3) for x in np.percentile(diffs, [2.5, 97.5])],
             "P(A>B)": round(float((diffs > 0).mean()), 3),

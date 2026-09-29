@@ -30,6 +30,21 @@ sınıf-sözlüğü farkı; ama B nekrozu hiç bilmiyor. Doğrulamak için yeni 
 onaylı küçük set). Olası sonraki: hibrit (A nekroz + soluk→slough kuralı ön-kayıtla), CNN-B (ön-eğitimli ağırlık
 indirmesi onay ister).
 
+**ÖN-KAYIT — CNN-B (2026-09-29, CWDB'de koşmadan önce):** B'nin zayıf kurulduğu itirazını kapatmak için
+B-CNN = torchvision DeepLabV3-MobileNetV3 (COCO ön-eğitimli, 11M), DFUTissue TrainVal'da eğitim (her 6. görüntü iç
+doğrulama; model seçimi iç doğrulama G+S+kallus ortalama Dice ile), 3 seed (0,1,2). Girdi: yara kırpması 256 kare.
+Sınıflar fibrin→S, granülasyon→G, kallus→diğer (sözlük eşlemesi YOK; eşlemeli hâl yalnız keşif olarak ayrı raporlanır).
+Birincil: A vs B-CNN, G+S Dice ortalaması, CWDB R1 ve R2, 3 seed'in ortalaması ve her biri. Kural sonuç görülünce değişmez.
+
+**SONUÇ — CNN-B** (`training/train_tissue_cnn.py`, `runs/tissue_cnn/seed{0,1,2}.pt`, iç doğrulama 0.63/0.62/0.59;
+`runs/tissue_ab_cnn/report.json`). DFUT Test (ayak): B-CNN G 0.87–0.90, S **0.64–0.71** (RF 0.35, A 0.18) → evinde
+açık ara en iyi. CWDB R1 (G / S): B-CNN s0 0.67/0.41, s1 0.63/0.46, s2 0.58/0.55; A 0.71/0.46. **A − B-CNN (G+S):
+R1 +0.045/+0.037/+0.019, R2 +0.013/−0.012/−0.008; tüm GA'lar 0'ı içeriyor → BERABERE.** "A kazandı" sonucunun
+çoğu zayıf RF'ten geliyormuş; düzgün CNN ile bası yarasında G+S'de fark yok. Nekrozu hâlâ yalnız A buluyor (0.70).
+Keşif (kanıt değil): B-CNN kallus→S ile CWDB R1 S 0.59–0.63 (insan 0.64), R2 0.52–0.56.
+**ÖN-KAYIT — hibrit (yeni bası seti için, 2026-09-29):** H = B-CNN (3 seed çoğunluk oyu) G/S + kallus→S, üzerine
+A'nın nekroz kuralı (A'nın N dediği pikseller N). Birincil: H vs A vs B-CNN, G+S ortalaması; ikincil N.
+
 **ÖN-KAYIT (2026-09-29, yeni bası doku test seti görülmeden):** Ana doku yöntemi = A, tek değişiklikle:
 "açık+gri → diğer" kümeleri **slough** sayılır (bası yarasında kallus yok). Diğer her şey sabit: k=4, renk açısı
 sınırı 38°, nekroz L*<30 ve C*<20, süreklilik kuralı açık. Birincil ölçü = G+S Dice ortalaması (havuzlanmış, uzman
