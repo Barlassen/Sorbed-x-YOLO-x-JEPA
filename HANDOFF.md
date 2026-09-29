@@ -1,7 +1,192 @@
 # Devir Teslim — Sorbed × YOLO × JEPA
 
 > Yeni bir sohbette / oturumda kaldığımız yerden devam etmek için özet.
-> Son güncelleme: 2026-09-10.
+> Son güncelleme: 2026-09-11.
+
+## SON DEVAM (2026-09-29, 2) — Doku tespiti A (etiketsiz renk) vs B (DFUTissue etiketli)
+
+`training/tissue_ab_compare.py` → `runs/tissue_ab/report.json`, `montage.png`, `logs/tissue_ab.log`.
+A = görüntü başına Lab k-means (k=4) + küme adlandırma (koyu+gri → nekroz, açık+gri → diğer, yoksa renk açısı:
+kırmızı → granülasyon, sarı → slough) + süreklilik kuralı (yaranın <%3'ü adacıklar çevreye katılır). Tek serbest
+parametre (renk açısı sınırı = 38°) DFUTissue TrainVal'da ayarlandı. B = piksel random forest (Lab, bulanık Lab,
+yerel std, HSV, gradyan, sınıra uzaklık), DFUTissue TrainVal 94. CWDB 27 × 4 uzman yalnız sonda bir kez.
+Havuzlanmış Dice, 4 uzman ortalaması, görüntü bootstrap %95 GA.
+
+| | G granülasyon | S slough | N nekroz |
+|---|---|---|---|
+| DFUT Test 16 (ayak) A / B | 0.79 / **0.91** | 0.18 / **0.35** | — |
+| CWDB R1 (uzman bölgesi) A | **0.71** | **0.46** | **0.70** |
+| CWDB R1 B | 0.67 | 0.15 | 0 (sınıfı yok) |
+| CWDB R1 insan tavanı | 0.70 | 0.64 | 0.83 |
+| CWDB R1 önemsiz (hepsi G) | 0.58 | 0 | 0 |
+| CWDB R2 (bizim maske) A / B | 0.64 / 0.64 | 0.41 / 0.12 | 0.65 / 0 |
+
+A−B (G+S ortalaması): R1 +0.177 [0.089, 0.295], R2 +0.148 [0.068, 0.252], P(A>B)=1.0. B evinde (ayak) kazanıyor,
+bası yarasında kaybediyor → alan farkı somut. Süreklilik kuralı etkisiz (A ≈ A-raw), k-means zaten düzgün bölge veriyor.
+**Teşhis:** B soluk sarı-beyaz slough'u %41 "kallus" diyor (ayakta soluk = nasır; bası yarasında kallus yok). A'nın
+"açık+gri → diğer" kuralı da beyazımsı slough'u kaçırıyor. **SONRADAN (keşif, cetvele bakıldıktan sonra → kanıt değil):**
+kallus/diğer → slough eşlemesiyle S: A 0.46→0.55, B 0.15→0.57; G+S: A 0.63, B 0.62. Yani B'nin çöküşü tamamen
+sınıf-sözlüğü farkı; ama B nekrozu hiç bilmiyor. Doğrulamak için yeni bir bası doku seti gerekir (kendi 732'den uzman
+onaylı küçük set). Olası sonraki: hibrit (A nekroz + soluk→slough kuralı ön-kayıtla), CNN-B (ön-eğitimli ağırlık
+indirmesi onay ister).
+
+## SON DEVAM (2026-09-29) — YOLO derinliği WoundsDB gerçek derinliğiyle fine-tune: NEGATİF
+
+(11 Eylül → 29 Eylül arası depoda teknik iş yok; yalnız staj raporu + LinkedIn.)
+Araçlar: `training/prepare_woundsdb_depth.py` (hasta bazlı bölme: her 5. vaka test → 9 hasta/14 sahne test,
+56 eğitim; hedef = `thermal-stereo.png` şekli, sahne başına temel modelin metre aralığına afin oturtulmuş,
+0 = ölçüm yok) ve `training/eval_woundsdb_depth.py` (11 Eylül protokolü, yalnız test hastaları).
+Eğitim `yolo26n-depth` AdamW lr 1e-4, mosaic 0, imgsz 320. İlk koşuda (val = test) test silog 8. epoch'a kadar
+düştü (0.218→0.155), 9'dan sonra patladı (0.55) → ezber. Temiz seçim için eğitim hastalarından iç doğrulama
+(5 vaka) ayrıldı: `runs/depth/runs/depth/woundsdb_ft_inner/weights/best.pt` (epoch 3). Test (tek sefer):
+
+| model | stereo yön uyumu | ToF yön uyumu | |ρ| stereo / ToF | WoundsDB ayırt | bası cetveli ayırt | cetvel çukur |
+|---|---|---|---|---|---|---|
+| n (temel) | 6/15 | 9/13 | 0.45 / 0.41 | 0.65 | 0.69 | 9/27 |
+| l (temel) | 10/15 | 8/13 | 0.46 / 0.44 | 0.70 | 0.71 | 11/27 |
+| **n + WoundsDB ft** | 7/15 | 7/13 | **0.56** / 0.38 | 0.64 | **0.60** | 9/27 |
+
+Yorum: model stereo sensörün genel sahne şeklini biraz öğrendi (ρ 0.45→0.56) ama bağımsız ToF'ta iyileşme yok,
+yara çukuru yönü hâlâ yazı tura, bası cetvelinde KÖTÜLEŞTİ (0.69→0.60). 56 sahne + 8-bit göreli hedef yara
+kabartısını öğretmeye yetmiyor. Not: test 15 sahne → gürültülü. JSON: `runs/depth/woundsdb_eval_{base,ft}.json`.
+**Derinlik kolu kapandı:** tek fotoğraftan derinlik ne hazır ne fine-tune ile yara çukurunu görüyor; Evre 3↔4
+için gerçek sensör gerekir. Sıradaki: Ario'ya bulgu + renk ağırlıklı etiketsiz doku katmanlaması (CWDB 27 ile ölç).
+
+## SON DEVAM (2026-09-11) — veri haritası, segmenter güçlendirme, insan tavanı
+
+**Veri haritası** (artefakt: https://claude.ai/code/artifact/ce283b86-225e-4df5-9f29-83b87646c433):
+7.613 görüntü / 11 kaynak sayıldı. Yeni gelenler: `data/corpus/roboflow_ambatron` (929, yara TÜRÜ
+D/V/S/P/N/BG, P=134), `data/corpus/woundsdb` (46 hasta/79 sahne, **bacak/venöz**, bası değil; 64 gerçek
+derinlik, etiket yok), `data/corpus/complexwounddb` (bozuk klon düzeltildi: 27 görüntü × 4 uzman doku
+maskesi, **çoğu bası**), `data/corpus/co2wounds_v2` (IEEE DataPort'tan elle: 764, 607 maske, resmi bölme
+485/122/157, test maskesi ve hasta ID yok). Medetec hâlâ elle indirilmedi (toplu indirme yok, lisans belirsiz).
+
+**Dondurulmuş cetveller** (hiçbir eğitime girmez): seg `azh_fuseg/validation` 200 · doku `DFUTissue
+Labeled/Test` **16** · evre `fr7kn/test` (temiz ~189) · tip `ambatron/test` 233 · derinlik WoundsDB 79.
+**Sızıntı bulguları:** fr7kn kendi train↔test 17 (valid 45); azh_fuseg train↔kendi val 7; CO2Wounds
+train↔val 10; azh_fuseg↔DFUTissue Labeled 7. Havuzlar: `data/pool_foot` 1158, `data/pool_pressure` 3137,
+`data/pool_all` 4989 (hepsi cetvellere karşı dHash ile süzülü, hamming 2).
+
+**Segmenter** (commit f7c4a22): yeni araçlar `prepare_co2wounds_seg`, `merge_yolo_seg`,
+`prepare_complexwound_ruler`, `augment_tight_crops`. Birleşik set `data/yolo_seg_combined` (1326 +
+2541 yakın-kırpma = 3867 train / 136 val). yolo26n-seg 50 epoch → `runs/segment/runs/segment/combined_v1/weights/best.pt`
+(val mask mAP50 0.723, epoch 41).
+- **İnsan tavanı:** ComplexWoundDB 4 uzman ortalama ikili Dice **0.862 ± 0.19** (`data/ruler_complexwound/agreement.json`).
+- Eski segmenter'ın asıl kusuru kadrajdı: yara kareyi doldurunca maske yok (fr7kn %47.5 boş).
+- Hizalama: `check_mask_quality` + `precompute_rgbd` artık `retina_masks=True` (COMMIT EDİLMEDİ). Etkisi
+  küçük (bası eski 0.848→0.857); 640 px'te 4:3 fotoğraflar dolgu almıyor, 732 gerilemesini açıklamıyor.
+
+| (retina) | Bası CWDB | Ayak azh | Minik DFUT | Havuz boş | Evre I / SDTI bulma |
+|---|---|---|---|---|---|
+| eski 0.05 | 0.857 | 0.818 | 0.461 | 17.8% | 36% / 65% |
+| eski 0.01 | **0.865** | 0.809 | 0.475 | 11.8% | 61% / 83% |
+| yeni 0.05 | 0.770 | 0.809 | **0.823** | 7.1% | 75% / 96% |
+| yeni 0.01 | 0.747 | 0.773 | 0.778 | **4.0%** | **82% / 100%** |
+
+"Yeni model kapalı lezyonları kaçırıyor" hipotezi veriyle ÇÜRÜDÜ (tersine çok daha iyi buluyor).
+Kendi 732'de "gerileme" gürültü: 200 fotoğrafta yeni 12 kaybetti, 16 kazandı.
+
+**Maske kararı — yedekli birleşim** (`logs/fallback_eval.log`): önce eski FUSeg modeli conf 0.01, bulamazsa
+yeni birleşik model conf 0.01 → bası Dice **0.865**, havuz boş maske **%1.9** (kendi 732 %5.0, fr7kn %6.7);
+minik kırpma 0.567 (hedef alan değil). `precompute_rgbd` artık `--fallback-weights/--fallback-conf` alıyor.
+
+**yolo26s:** `yolo26s-seg.pt` indirildi (22.4 MB, ultralytics/assets v8.4.0) ama EĞİTİLMEDİ — kullanıcı ve
+mentör etiketleme yapamıyor, 10–12 saatlik eğitim beklenemiyor. Not: yeni modelin bası gerilemesinin muhtemel
+sebebi model seçiminin lepra/ayak val'i ile yapılması; ileride bası val seti olmadan tekrarlanmamalı.
+
+**Evre cetveli** `data/ruler_stage_fr7kn/` (sızıntısız): test **187** (E1 39·E2 61·E3 52·E4 35), probe-train
+1671 (fr7kn train+valid, test ikizleri atıldı). Yeni prob `training/validate_stage_probe.py` (+6 test):
+doku probuyla aynı çok-seed+bootstrap protokolü, macro-F1 + QWK, pre-training girdisini birebir taklit eder,
+checkpoint anahtarları uyuşmazsa DURUR (eski probların `strict=False` sessiz-rastgele riskine karşı).
+
+**Koşan orkestrasyon** (2026-09-11 ~11:48 başladı; loglar `logs/`): pool_pressure derinlik+maske →
+`train_jepa` (tuned: crop+depth+relief, vic 4, lr 3e-4, 30 epoch) → `runs_jepa/jepa_pressure.pt` →
+`runs_jepa/stage_validation_pressure.json`. Paralelde kontrol: `jepa_best_c05` ve `jepa_v2` aynı evre
+cetvelinde → `runs_jepa/stage_validation_{jepa_best_c05,jepa_v2}.json`. Bu üçü alan-uyumu matrisinin evre sütunu.
+
+**Kontrol probları (evre cetveli, test 187, ortalama havuzlama):** rastgele 5 seed F1 0.611±0.012 / QWK
+0.727±0.007; `c05` 0.542/0.545, `v2` 0.534/0.555 → JEPA rastgeleden ANLAMLI kötü (QWK Δ≈−0.18, P(Δ>0)=0.001).
+Teşhis (`logs/collapse_diag.log`): çökme DEĞİL (efektif rank JEPA ≥ rastgele), standartlaştırma değil. JEPA
+yama vektörleri görüntü içinde neredeyse dik (cos 0.04–0.12; rastgele 0.84) → ortalama havuzlama bilgiyi
+götürüyor. Havuzlama teşhisi (`logs/pooling_diag.log`, SADECE geliştirme checkpoint'leri + 3 rastgele seed):
+
+| havuz (F1/QWK) | rastgele | c05 Δ | v2 Δ |
+|---|---|---|---|
+| mean | 0.612/0.731 | −0.071/−0.186 | −0.078/−0.176 |
+| meanstd | 0.667/0.766 | −0.052/−0.032 | −0.086/−0.097 |
+| max | 0.588/0.722 | −0.039/−0.096 | −0.020/+0.002 |
+
+Havuzlama QWK farkının çoğunu açıklıyor, ama JEPA hiçbir havuzlamada rastgeleyi geçmiyor.
+
+**ÖN-KAYIT (pressure JEPA sonucu görülmeden, 2026-09-11 ~12:35):** birincil = `mean` (baştan sabit);
+ikincil = `meanstd` (geliştirme setinde rastgele için ve c05 için en iyi → rakibe en güçlü tabanı veren seçim).
+Pressure JEPA'ya başka havuzlama denenmeyecek. `validate_stage_probe.py --pool` eklendi (varsayılan mean).
+
+**SONUÇ — bası JEPA'sı** (`runs_jepa/jepa_pressure.pt`, pool_pressure 3137, 30 epoch, kayıp 0.396→0.211):
+
+| JEPA | Ayak doku (F1; rastgele ~0.52) | Bası evre, mean (F1/QWK; rastgele 0.611/0.727) | Bası evre, meanstd (rastgele ~0.65/0.76) |
+|---|---|---|---|
+| c05 (ayak-ağırlıklı 2142) | **0.545** | 0.542/0.545 | 0.615/0.733* |
+| v2 (karma 5096) | 0.464 | 0.534/0.555 | 0.581/0.668* |
+| **pressure (3137)** | 0.461 | 0.539/0.572 | 0.565/0.667 |
+
+(* geliştirme teşhisi: 3 seed, bootstrap yok. pressure satırı tam protokol: 5 seed + 2000 bootstrap;
+JSON'lar `runs_jepa/stage_validation_pressure{,_meanstd}.json`, `runs_jepa/tissue_validation_pressure.json`.)
+Bası JEPA'sı birincil: F1 Δ −0.077 [−0.151, −0.001] P(Δ>0)=0.025, QWK Δ −0.152 P=0.002. İkincil: F1 Δ
+−0.088 [−0.169, −0.007] P=0.015, QWK Δ −0.091 [−0.206, +0.018] P=0.052. İkisinde de JEPA rastgeleden kötü.
+
+**Yorum:** Ayak doku probunda alan etkisi var (en iyisi ayak-ağırlıklı JEPA). Bası evrelemesinde alan uyumu
+YETMİYOR: eşleşen havuzla eğitilen JEPA bile dondurulmuş lineer probda rastgele kodlayıcıyı geçemiyor.
+Ön-kayıtlı, temiz bir negatif sonuç. Sıradaki aday: fine-tune merdiveni (önceki bulgu: JEPA'nın avantajı
+fine-tune'da görünüyordu) ve/veya dikkat-tabanlı prob (yama dikliği sorununu doğrudan ele alır).
+
+**KALLUS BULGUSU (segmenter):** DFUTissue etiketli alanının **%59'u kallus** (sınıf 3 = yara çevresindeki
+nasırlı deri, yara yatağı DEĞİL); `prepare_dfutissue_seg.py` `ann > 0` ile kallusu da "yara" saymış. Kanıt,
+DFUTissue Test (16): eski model kallus-dahil GT 0.475 → sadece-yatak GT **0.790** (çizim/yatak 0.98×); yeni
+model 0.823 → **0.557** (çizim/yatak **2.71×**). Yani eski modelin DFUT "0.46"sı minik-fotoğraf sorunu DEĞİL,
+tanım farkıymış (önceki açıklama yanlıştı). Yeni model kallusu yara diye öğrenmiş → bası cetvelinde taşma
+(isabet 0.680, kapsama 0.982, alan medyan 1.32×; tek büyük maske, fazladan aday değil — sadece en güvenli adayı
+almak 0.770→0.777). Düzeltme planı: DFUTissue seg etiketlerini sadece sınıf 1–2 ile yeniden üret → yakın
+kırpmaları yeniden üret → yeni modeli düzeltilmiş veriyle kısa fine-tune et (~1–1.5 saat) → bası/ayak/DFUT-yatak
+cetvelleri + havuz boş oranıyla ölç. KULLANICI ONAYI BEKLİYOR.
+
+**MENTÖR (Ario) YÖNTEMİ — derinlik kontrolü:** Ario etiketsiz maskeleme önerdi (derinlik + renk gradyanı +
+dıştan içe sıralı, kesintisiz katman kuralları; önce etiketsiz dene → doğruysa devam, değilse etiketle). İlk
+kontrol, ComplexWoundDB 27 (derinlik `data/ruler_complexwound/depth`): yara içi vs hemen dışı ayırt edicilik
+(yönden bağımsız AUC medyan) **derinlik 0.60** (≥0.80: 4/27; yön tutarsız, 19/27; sınırda basamak yok, 1.09×).
+Vücut kıvrımı ikinci derece yüzeyle çıkarılınca **0.69** (≥0.80: 3/27; yön 18/27; etki 0.76). **Renk (Lab a\*)
+0.80** (≥0.80: 14/27; sınırda belirgin değişim, 1.93×). Görsel: YOLO26n-depth haritaları bulanık; vücut şeklini
+ve cetvel/çarşaf gibi nesneleri görüyor, mm ölçekli yara çukurunu görmüyor, koyu eskarı "uzak" sanıyor.
+Sonuç: bu tahmini derinlik yara sınırı için güvenilir değil.
+
+**Gerçek derinlik testi** (WoundsDB, bacak/venöz ülser, 79 sahne; termal çerçevede hizalı, montajla doğrulandı):
+YOLO26n-depth ↔ gerçek derinlik sıra korelasyonu |ρ| medyan **0.48** (stereo) / **0.44** (ToF); iki gerçek sensör
+birbirine **0.70** (sağlama). Kıvrım çıkarılmış derinlikte yara içi vs hemen dışı (maskeler bizim sistemden):
+**stereo 0.78** (≥0.80: 32/74, yön tutarlı **68/74**, etki 1.02), **ToF 0.76** (21/61, yön 50/61, etki 0.93),
+**YOLO 0.65** (12/77, yön 44/77 ≈ yazı tura, etki 0.42). Görsel: gerçek derinlik yara yüzeyinin kabartısını
+gösteriyor, YOLO haritası sadece kaba bölgeler. **Sonuç: derinlik fikri geçerli; zayıf halka YOLO26n-depth (nano)
+modeli.**
+
+**yolo26l-depth denendi** (`yolo26l-depth.pt`, 55.9 MB, ultralytics/assets v8.4.0): genel geometri gerçek derinliğe
+daha yakın (|ρ| stereo 0.48→**0.59**, ToF 0.44→**0.53**; gerçek↔gerçek 0.70) AMA yara çukuru hâlâ görünmüyor:
+WoundsDB ayırt etme 0.65→0.67, yön 57%→64% (gerçek stereo 92%); bası cetveli 0.69→0.71, yön 67%→59%. Sonuç:
+büyük YOLO derinliği sahneyi daha iyi görüyor, mm ölçekli çukuru görmüyor. Sıradaki aday: Depth Anything V2
+(`transformers` kurulumu + 94 MB) ya da Marigold V2 (yalnız Linux+CUDA, ~17 GB VRAM → bulut GPU). Aksi hâlde
+etiketsiz maske renk ağırlıklı kurulmalı.
+
+**Depth Anything V2 Small denendi** (`transformers 5.17.0` kuruldu; `depth-anything/Depth-Anything-V2-Small-hf`,
+24.8M parametre, 94 MB, MPS'te çalışıyor): WoundsDB'de YOLO-L ile aynı (ayırt etme 0.65, yön 64%); bası cetvelinde
+**0.84** (≥0.80: 15/27, etki 2.88; renk 0.80). Ayırıcı test (`logs/depth_geometry_check.log`):
+(a) WoundsDB'de yara içinin çukur/tümsek yönünde gerçek sensörle uyum **L 45–49%, DA-V2 38–48% = yazı tura** →
+modellerin gerçek yara geometrisini gördüğüne dair kanıt yok. (b) Parlaklık bağı testi ayırıcı çıkmadı: gerçek
+ToF'un kendisi de parlaklıkla 0.50 bağlı (çukur gerçekten koyu ve/veya ToF'un koyu yüzey hatası). (c) Bası
+cetvelinde DA-V2 yara içini 20/27 "daha uzak" gösteriyor, ama gerçek derinlik olmadan doğrulanamaz.
+**Sonuç:** fotoğraftan derinlik tahmini yara kabartısı için güvenilir bir ölçüm değil. DA-V2 haritası bası'da
+yarayı ayırt eden bir *özellik* olarak işe yarayabilir (kaynağı görünüş de olabilir). Gerçek derinlik (Evre
+3↔4) için gerçek sensör (telefon LiDAR/stereo) gerekir; bu bulgu Ario'ya iletilecek. Maske için yol: renk ağırlıklı
+etiketsiz yöntem (+ isteğe bağlı DA-V2 haritası ek ipucu), cetvelde ölçülerek.
+Not: WoundsDB bası değil; maskeler uzman değil (üç kaynakta aynı maske → karşılaştırma adil).
+Commit edilmemiş: precompute/check_mask_quality değişiklikleri, validate_stage_probe + testi.
 
 ## SON DEVAM (2026-09-10) — havuz büyütüldü (2142 → 5096), yeni veriler geldi
 
@@ -30,11 +215,26 @@ Dedup duyarlılığı: hamming 0→264, 2→561, 4→757, 6→921 elenen. Havuz-
 + probe testi zaten dışlandığı için sıkı eşik (2) seçildi = veri kaybını en aza indir.
 Eski `data/rgbd_pool` (2142) ve checkpoint'ler DOKUNULMADI (geri dönülebilir).
 
-**SIRADAKİ (kullanıcı onayı bekliyor — AĞIR, saatler):** yeni havuz için maske+derinlik
-üret (`precompute_rgbd --images data/rgbd_pool_v2/images --out data/rgbd_pool_v2 --conf 0.05`),
-sonra `train_jepa` ile yeniden eğit + `validate_tissue_probe` ile ölç. Hedef: P(Δ>0) 0.93 → >0.95.
-Detaylı plan artefaktı: https://claude.ai/code/artifact/ce283b86-225e-4df5-9f29-83b87646c433
-build_pool.py + testi henüz COMMIT edilmedi.
+**KOŞULDU — SONUÇ NEGATİF (dürüst).** precompute (conf 0.05) + train_jepa (30 epoch,
+loss 2.0→~0.15) + validate koşuldu. `runs_jepa/jepa_v2.pt`, `tissue_validation_v2.json`.
+
+| | Eski havuz (2142, ayak-ağırlıklı) | Yeni havuz (5096, bası-ağırlıklı) |
+|---|---|---|
+| JEPA macro-F1 | 0.545 | **0.464** ⬇️ |
+| JEPA − random | +0.027 (P=0.93) | **−0.054** (z=−1.38, P(Δ>0)=0.034) |
+
+**Havuzu büyütmek doku probunu KÖTÜLEŞTİRDİ.** Neden (+önemli düzeltme): doku test seti
+**ayak yarası** (DFUTissue); yeni havuz ise **bası-ağırlıklı** (ayak 1357 vs bası 3739;
+piid ve fr7kn+kaggle hepsi BASI — bu oturumda "piid ayak/karışık" dediğim YANLIŞTI, piid bası).
+Eski havuz ~%66 ayaktı, yeni ~%73 bası → ayak-yarası sinyali seyreldi → ayak-probu düştü.
+Skor tek yönlü (bası oranı arttıkça düştü) = gürültü değil, alan-uyumsuzluğunun EN güçlü kanıtı.
+
+**Yayınlanabilir bulgu:** alan-dışı ön-eğitim verisi eklemek alan-içi probu bozar; ham havuz
+boyutundan çok ALAN UYUMU belirleyici. Sorbed bası sistemi ama JEPA hep ayak probuyla ölçülüyor
+= yanlış cetvel. **Asıl kaldıraç: bası yarası için etiketli değerlendirme seti (İş Kolu B).**
+Eski checkpoint'ler + rgbd_pool DOKUNULMADI. Plan artefaktı:
+https://claude.ai/code/artifact/ce283b86-225e-4df5-9f29-83b87646c433
+build_pool.py + testi COMMIT edildi (9bc218c). tissue_validation_v2.json henüz commit'lenmedi.
 
 ## SON DEVAM (2026-09-08) — ayrı yüzey sınıfları, anotasyon v2
 
