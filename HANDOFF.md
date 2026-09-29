@@ -30,6 +30,13 @@ sınıf-sözlüğü farkı; ama B nekrozu hiç bilmiyor. Doğrulamak için yeni 
 onaylı küçük set). Olası sonraki: hibrit (A nekroz + soluk→slough kuralı ön-kayıtla), CNN-B (ön-eğitimli ağırlık
 indirmesi onay ister).
 
+**ÖN-KAYIT (2026-09-29, yeni bası doku test seti görülmeden):** Ana doku yöntemi = A, tek değişiklikle:
+"açık+gri → diğer" kümeleri **slough** sayılır (bası yarasında kallus yok). Diğer her şey sabit: k=4, renk açısı
+sınırı 38°, nekroz L*<30 ve C*<20, süreklilik kuralı açık. Birincil ölçü = G+S Dice ortalaması (havuzlanmış, uzman
+ortalaması), ikincil = N Dice. Karşılaştırma: B + "kallus → slough" ve önemsiz taban. Yeni set: kendi 732'den uzman
+onaylı küçük bası seti (A taslağı → uzman düzeltir; düzeltilmiş hali cetvel olur, A'nın ham taslağıyla kıyas ayrıca
+raporlanır, çünkü taslaktan başlamak uzmanı A'ya doğru çekebilir). Bu set görülmeden kural değiştirilmeyecek.
+
 ## SON DEVAM (2026-09-29) — YOLO derinliği WoundsDB gerçek derinliğiyle fine-tune: NEGATİF
 
 (11 Eylül → 29 Eylül arası depoda teknik iş yok; yalnız staj raporu + LinkedIn.)
