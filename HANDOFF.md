@@ -42,6 +42,22 @@ açık ara en iyi. CWDB R1 (G / S): B-CNN s0 0.67/0.41, s1 0.63/0.46, s2 0.58/0.
 R1 +0.045/+0.037/+0.019, R2 +0.013/−0.012/−0.008; tüm GA'lar 0'ı içeriyor → BERABERE.** "A kazandı" sonucunun
 çoğu zayıf RF'ten geliyormuş; düzgün CNN ile bası yarasında G+S'de fark yok. Nekrozu hâlâ yalnız A buluyor (0.70).
 Keşif (kanıt değil): B-CNN kallus→S ile CWDB R1 S 0.59–0.63 (insan 0.64), R2 0.52–0.56.
+**ÖN-KAYIT — çok kaynaklı CNN (2026-10-01, eğitimden önce):** Yeni veri: LUTSeg (HF `ksanchez84/LUTSeg`, CC BY 4.0,
+141 lepra ülseri/39 hasta, kaynak CO2Wounds) + WoundTissue (GitHub akabircs, CC BY-NC-SA, depoda 147'nin yalnız 14'ü,
+128 px). Cetvellere dHash sızıntısı (hamming ≤6): 0. Ortak sözlük: S (fibrin/slough), G, O (kallus/epitel/maserasyon),
+N (nekroz); LUTSeg "Other", kemik, tendon → yok say. B-CNN-multi: aynı mimari/girdi/kayıp, 4 sınıf, eğitim =
+DFUT TrainVal (her 6. hariç) + LUTSeg train + WoundTissue 14; iç doğrulama = DFUT her 6. + LUTSeg val (hasta bazlı);
+seçim iç doğrulama sınıf-ortalama Dice; 3 seed. Birincil: A vs B-CNN-multi, G+S, CWDB R1 ve R2. İkincil: N Dice
+(A vs B-CNN-multi) ve B-CNN-multi vs B-CNN (yalnız DFUT). Kallus→S yine yalnız keşif.
+
+**SONUÇ — çok kaynaklı CNN** (`runs/tissue_cnn_multi/seed{0,1,2}.pt`, iç doğr. 0.61/0.65/0.62;
+`runs/tissue_ab_multi/report.json`). CWDB R1 3-seed ort. (DFUT-only → multi): G 0.628 → 0.628, **S 0.474 → 0.566**
+(insan 0.643), **N 0 → 0.30** (A 0.70, insan 0.83). R2: S 0.46 → 0.50, N → 0.17. Ayak (DFUT Test) bozulmadı.
+A − multi (G+S): R1 −0.008/−0.012/−0.016, R2 −0.021/−0.020/−0.012, GA'lar 0'ı içeriyor → yine BERABERE (CNN hafif
+önde). Kallus→S keşif eşlemesi artık az fark yaratıyor (S +0.01..+0.04): çeşitli veri "soluk = kallus" hatasını büyük
+ölçüde kendiliğinden düzeltti. Nekrozda A hâlâ açık ara iyi → hibrit (CNN-multi G/S + A nekroz) mantıklı; CWDB'de
+ölçülürse keşif sayılır, kanıt yeni uzman onaylı bası setinde.
+
 **ÖN-KAYIT — hibrit (yeni bası seti için, 2026-09-29):** H = B-CNN (3 seed çoğunluk oyu) G/S + kallus→S, üzerine
 A'nın nekroz kuralı (A'nın N dediği pikseller N). Birincil: H vs A vs B-CNN, G+S ortalaması; ikincil N.
 

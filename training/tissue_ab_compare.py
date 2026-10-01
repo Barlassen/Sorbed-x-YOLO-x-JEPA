@@ -240,11 +240,12 @@ def main() -> None:
     if args.cnn:
         from training.train_tissue_cnn import load, predict
 
-        for i, ck in enumerate(args.cnn):
+        for ck in args.cnn:
             net = load(ck)
-            methods[f"B-CNN s{i}"] = lambda im, r, net=net: predict(net, im, r)
+            tag = f"{Path(ck).parent.name}/{Path(ck).stem}"
+            methods[f"B-CNN {tag}"] = lambda im, r, net=net: predict(net, im, r)
             # exploratory only (vocabulary mapping chosen after seeing the RF result): callus -> slough
-            methods[f"(keşif) B-CNN s{i} kallus->S"] = lambda im, r, net=net: np.where(
+            methods[f"(keşif) B-CNN {tag} kallus->S"] = lambda im, r, net=net: np.where(
                 (lab := predict(net, im, r)) == O, S, lab).astype(np.uint8)
 
     # 2) in-domain sanity: DFUTissue Test (16), wound region from the annotation
