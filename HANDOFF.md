@@ -1,7 +1,29 @@
 # Devir Teslim — Sorbed × YOLO × JEPA
 
 > Yeni bir sohbette / oturumda kaldığımız yerden devam etmek için özet.
-> Son güncelleme: 2026-09-11.
+> Son güncelleme: 2026-10-02.
+
+## 🧭 BURADAN DEVAM (2026-10-02) — kısa durum ve açık kararlar
+
+**Zincir:** maske ✅ (bası Dice 0.865 ≈ insan 0.862) → doku 🟡 → evre 🟡.
+**Derinlik kolu kapandı** (tek fotoğraftan derinlik + WoundsDB fine-tune negatif; Evre 3↔4 için hemşire girişi
+ya da çekim anında gerçek sensör). **Doku:** CWDB 27×4 cetvelinde (G / S / N):
+renk yöntemi A 0.71 / 0.46 / **0.70**; çok kaynaklı CNN (DFUTissue + LUTSeg + WoundTissue 14) 0.63 / **0.57** / 0.30;
+insan 0.70 / 0.64 / 0.83. G+S'de A ile CNN berabere; nekroz yalnız A'da güçlü → hibrit (CNN G/S + A nekroz).
+G zaten insan tavanında; kalan pay S'de az, N'de büyük. 27 görüntüyle GA ≈ ±0.10 → küçük kazançlar ölçülemiyor.
+**JEPA:** yöntem (etiketsiz ön-eğitim), model değil; bizim enkoder 2.95M parametreli ViT (224 px, 16 px yama, 196
+yama × 192 boyut, 6 katman, 5 kanal). Dizüstü ölçeğinde rastgele başlangıcı geçmedi.
+
+**Açık seçenekler (kullanıcı henüz seçmedi):**
+1. **Sözde-etiket (B):** ~3.000 etiketsiz bası fotoğrafına hibrit taslak → CNN'i bunlarla yeniden eğit (~1–1.5 sa).
+2. **Üçlü başlangıç karşılaştırması:** aynı doku eğitimi, başlangıç = COCO / bizim JEPA / rastgele (ViT tabanlı
+   segmentasyon kurulumu gerekir, ~1–2 sa) → stajın "JEPA katkı sağlar mı" sorusunu doku için temiz kapatır.
+3. **WoundTissue tam set** (147; bası + nekroz + kemik/tendon) için yazarlara (Kabir ve ark.) e-posta — kullanıcı/Ario.
+4. **Uzman onaylı küçük bası seti** (A/hibrit taslağı → uzman düzeltir; hem cetveli büyütür hem eğitim verisi) — Ario.
+5. Ario'ya iletilecek: derinlik sonucu, renk yönteminin CNN kadar iyi olduğu ve nekrozda üstün olduğu, test seti ihtiyacı.
+
+**Git:** `claude/sorbed-details-heuk41`. Staj raporları (`STAJ_RAPORU_*.md/.docx`) bilerek git dışında
+(`.git/info/exclude`); `.claude/settings.json` kişisel, commit edilmez.
 
 ## SON DEVAM (2026-09-29, 2) — Doku tespiti A (etiketsiz renk) vs B (DFUTissue etiketli)
 
