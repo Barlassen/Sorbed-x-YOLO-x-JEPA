@@ -25,6 +25,40 @@ yama × 192 boyut, 6 katman, 5 kanal). Dizüstü ölçeğinde rastgele başlang�
 **Git:** `claude/sorbed-details-heuk41`. Staj raporları (`STAJ_RAPORU_*.md/.docx`) bilerek git dışında
 (`.git/info/exclude`); `.claude/settings.json` kişisel, commit edilmez.
 
+## SON DEVAM (2026-10-13, 2) — Roboflow setleri: denetim + ikinci cetvel
+
+Kullanıcı 4 zip indirdi → `data/corpus/rf_{petchs,segulcer,wuxi4,wuxi2}` (hepsi CC BY 4.0). dHash (≤6): cetvellere
+(CWDB, DFUT Test) ve eski setlere 0 çakışma; set-içi bölmeler arası: petchs 2, segulcer 2, wuxi4 10.
+Görsel denetim `runs/audit/*.png`:
+- **wuxi4 (351) + wuxi2 (374, 3× artırılmış): HAYVAN deneyi yaraları** (tüy, cetvel, "G3-test" etiketleri; koyu
+  kabuk "granülasyon" denmiş) → DIŞLANDI. wuxi4'te ayrıca 195/351 maske görüntüye göre 90° dönük.
+- **petchs (310, gerçek bası, çok-doku poligon + evre çizgisi)**: makul → kullan. 640² gerilmiş.
+- **segulcer (217)**: görüntü başına tek doku, tüm yara tek renk → kaba; yalnız ikincil deneme.
+**ÖN-KAYIT (eğitimden önce):** İKİNCİ CETVEL = petchs `test` 31 (eğitime hiç girmez; test↔train kopyası eğitimden
+çıkarılır). Puanlama yalnız doku-etiketli piksellerde (G/S/N poligon birleşimi; evre çizgisi içi etiketsiz alan
+belirsiz olduğu için hariç). Eğitim: multi+fig + petchs train (248 − kopya) ; iç doğrulama + petchs valid 31.
+B-CNN-P = bu; B-CNN-PS = + segulcer train+valid (195). 3'er seed. Birincil: CWDB R1 N ve G+S (multi+fig'e karşı) ve
+petchs-test G/S/N; A ile fark. Sözlük: granulation→G, slough→S, eschar→N, evre çokgenleri→yok say;
+segulcer Granulation→G, Sloughy→S, Necrotic→N, Epithelialising→O.
+
+**SONUÇ** (`runs/tissue_cnn_{P,PS}/seed*.pt`; `runs/tissue_ab_{P,PS}/report.json`, `runs/tissue_petchs/report_{P,PS}.json`).
+3-seed ort., G / S / N:
+| | CWDB R1 | CWDB R2 | petchs-test R1 (26) |
+|---|---|---|---|
+| A (renk) | 0.71 / 0.46 / 0.70 | 0.64 / 0.41 / 0.65 | 0.75 / 0.65 / 0.44 |
+| CNN multi+fig | 0.62 / 0.61 / 0.48 | 0.59 / 0.55 / 0.54 | 0.74 / 0.65 / 0.29 |
+| CNN +petchs (P) | **0.69** / 0.61 / 0.47 | 0.65 / 0.54 / 0.51 | 0.93 / 0.86 / 0.93 |
+| CNN +petchs+segulcer (PS) | 0.69 / 0.59 / **0.67** | 0.65 / 0.54 / **0.64** | 0.91 / 0.83 / 0.89 |
+| insan | 0.70 / 0.64 / 0.83 | | |
+A − CNN (G+S), CWDB: P −0.045..−0.080, PS −0.039..−0.079 (CNN önde, GA'lar 0'a dokunuyor). **PS ile CNN nekrozda
+A'ya yetişti** (CWDB R1 0.67 vs 0.70, R2 0.64 vs 0.65). petchs-test skorları aynı kaynak/etiketleyici (muhtemelen
+aynı hastalar; set-içi kopya bulundu) → şişkin, bağımsız kanıt DEĞİL; güvenilir cetvel CWDB. DFUT (ayak) PS'te hafif
+düştü (G 0.88→0.85). **MASKE BULGUSU:** petchs-test'te YOLO (eski→yeni yedekli) maske etiketçi sınırına Dice medyan
+0.41, doku piksellerinin medyan %32'sini kapsıyor (17/26 < %50); `runs/audit/petchs_yolo_mask.png`: yakın çekimde
+yara kareyi doldurunca eski FUSeg modeli yalnız kırmızı adacıkları işaretliyor, sarı/siyah alanları kaçırıyor; boş
+olmadığı için yedek (yeni) model hiç devreye girmiyor. CWDB'de sorun yok (0.865). Olası düzeltme: yakın çekim
+algılanınca yeni modeli kullanmak ya da maskeyi doku modeliyle genişletmek — ölçülmedi.
+
 ## SON DEVAM (2026-10-13) — Figshare bası doku poligonları eklendi
 
 Kullanıcının verdiği 4 set projede YOKTU (petchs Pressure-Ulcer-Segmentation ≠ bizdeki fr7kn). Roboflow setleri

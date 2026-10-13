@@ -118,7 +118,54 @@ def figshare_items():
         yield f.stem, img, lab
 
 
-def samples(multi: bool = False, figshare: bool = False):
+RF_PETCHS = Path("data/corpus/rf_petchs")
+RF_SEGULCER = Path("data/corpus/rf_segulcer")
+_COCO_AB = {"granulation": 1, "slough": 2, "eschar": 3,  # petchs (stage polygons = wound outline -> ignore)
+            "Granulation": 1, "Sloughy": 2, "Necrotic": 3, "Epithelialising": 4}  # segulcer
+
+
+def coco_items(root: Path, split: str, skip: set[str] = frozenset()):
+    """Roboflow COCO-segmentation export -> (name, img, ab label map). Unknown/stage classes paint 255 (ignore)
+    first; tissue polygons are painted on top. Pixels outside every polygon stay 0 (outside region)."""
+    import json
+
+    j = json.loads((root / split / "_annotations.coco.json").read_text())
+    cats = {c["id"]: c["name"] for c in j["categories"]}
+    by = {}
+    for a in j["annotations"]:
+        by.setdefault(a["image_id"], []).append(a)
+    for im in j["images"]:
+        if im["file_name"] in skip:
+            continue
+        img = cv2.imread(str(root / split / im["file_name"]))
+        if img is None:
+            continue
+        lab = np.zeros(img.shape[:2], np.uint8)
+        anns = sorted(by.get(im["id"], []), key=lambda a: cats[a["category_id"]] in _COCO_AB)
+        for a in anns:
+            v = _COCO_AB.get(cats[a["category_id"]], 255)
+            for seg in a["segmentation"] if isinstance(a["segmentation"], list) else []:
+                pts = np.array(seg, np.float32).reshape(-1, 2).astype(np.int32)
+                if len(pts) >= 3:
+                    cv2.fillPoly(lab, [pts], int(v))
+        yield im["file_name"], img, lab
+
+
+def petchs_test_dups(threshold: int = 6) -> set[str]:
+    """petchs train/valid file names that duplicate a petchs test image (kept out of training)."""
+    from training.dedup import dhash, hamming
+
+    test = [dhash(p) for p in (RF_PETCHS / "test").glob("*.jpg")]
+    out = set()
+    for sp in ("train", "valid"):
+        for p in (RF_PETCHS / sp).glob("*.jpg"):
+            h = dhash(p)
+            if h is not None and any(t is not None and hamming(h, t) <= threshold for t in test):
+                out.add(p.name)
+    return out
+
+
+def samples(multi: bool = False, figshare: bool = False, petchs: bool = False, segulcer: bool = False):
     """(name, crop, target, is_internal_val). DFUT: every 6th TrainVal image is internal val."""
     n_cls = 4 if multi else 3
     out = []
@@ -158,6 +205,22 @@ def samples(multi: bool = False, figshare: bool = False):
             reg = lab != 0
             crop, creg, (g,), _ = crop_resize(img, reg, lab)
             out.append((f"figshare/{name}", crop, _target(g, creg, n_cls), False))
+
+    def add(tag, items, is_val):
+        for name, img, lab in items:
+            reg = lab != 0
+            if not ((lab >= 1) & (lab <= 4)).any():
+                continue  # no tissue polygon at all (e.g. stage-1 outline only)
+            crop, creg, (g,), _ = crop_resize(img, reg, lab)
+            out.append((f"{tag}/{name}", crop, _target(g, creg, n_cls), is_val))
+
+    if petchs:
+        dups = petchs_test_dups()
+        add("petchs", coco_items(RF_PETCHS, "train", dups), False)
+        add("petchs", coco_items(RF_PETCHS, "valid", dups), True)
+    if segulcer:
+        for sp in ("train", "valid"):
+            add("segulcer", coco_items(RF_SEGULCER, sp), False)
     return out
 
 
@@ -200,11 +263,13 @@ def main() -> None:
     ap.add_argument("--out", required=True)
     ap.add_argument("--multi", action="store_true", help="add LUTSeg + WoundTissue and a 4th class (necrosis)")
     ap.add_argument("--figshare", action="store_true", help="also add the 20 Figshare pressure-ulcer polygons")
+    ap.add_argument("--petchs", action="store_true", help="add Roboflow petchs pressure-ulcer train (+valid as val)")
+    ap.add_argument("--segulcer", action="store_true", help="add Roboflow Segmentation-ulcer (coarse, 1 tissue/img)")
     args = ap.parse_args()
     torch.manual_seed(args.seed)
     rng = np.random.default_rng(args.seed)
 
-    items = samples(args.multi, args.figshare)
+    items = samples(args.multi, args.figshare, args.petchs, args.segulcer)
     val = [x for x in items if x[3]]
     train = [x for x in items if not x[3]]
     n_cls = 4 if args.multi else 3
