@@ -25,6 +25,24 @@ yama × 192 boyut, 6 katman, 5 kanal). Dizüstü ölçeğinde rastgele başlang�
 **Git:** `claude/sorbed-details-heuk41`. Staj raporları (`STAJ_RAPORU_*.md/.docx`) bilerek git dışında
 (`.git/info/exclude`); `.claude/settings.json` kişisel, commit edilmez.
 
+## SON DEVAM (2026-10-13) — Figshare bası doku poligonları eklendi
+
+Kullanıcının verdiği 4 set projede YOKTU (petchs Pressure-Ulcer-Segmentation ≠ bizdeki fr7kn). Roboflow setleri
+(petchs, Segmentation-ulcer, WuXi) giriş gerektiriyor, kullanıcı şu an indiremiyor → beklemede. Figshare 17206940
+(CC BY 4.0) indirildi → `data/corpus/figshare_pu2`: **20** Medetec bası yarası, LabelMe poligon: Granulation, slough
+tissue, Eschar, Re-ep, Ulceration (755 görüntü iddiası yanlış; makalenin tam korpusu açık değil). dHash: 291
+referansla kopya yok. Görsel denetim `runs/figshare_audit.png`: etiketler makul.
+**ÖN-KAYIT (eğitimden önce):** B-CNN-multi+fig = çok kaynaklı ayarın aynısı + Figshare 20 (hepsi eğitimde; Eskar→N,
+slough→S, Granulation→G, Re-ep→O, Ulceration-yalnız → yok say). 3 seed. Birincil: CWDB R1 N Dice (multi'ye karşı,
+3-seed ortalaması); ikincil G+S ve A'ya karşı fark. 20 görüntü az → küçük etki beklenir, GA geniş.
+**SONUÇ** (`runs/tissue_cnn_multi_fig/seed{0,1,2}.pt`, `runs/tissue_ab_fig/report.json`). 3-seed ort., multi → +fig:
+CWDB R1: G 0.628 → 0.618, **S 0.566 → 0.613** (insan 0.643), **N 0.299 → 0.476** (seed: 0.42/0.53/0.47; A 0.70,
+insan 0.83). R2 (bizim maske): S 0.500 → 0.546, **N 0.173 → 0.542** (A 0.645). DFUT Test S 0.64 → 0.72.
+A − CNN (G+S): R1 −0.029/−0.011/−0.052, R2 −0.029/−0.031/−0.063 → CNN hafif önde ama GA'lar 0'ı içeriyor.
+Yorum: yalnız 20 bası+eskar görüntüsü nekrozu belirgin yükseltti (beklenenden büyük; seed'ler tutarlı, R2'de
+3/3 seed eskilerin hepsinin üstünde) → **alan-içi (bası) + hedef sınıf içeren veri, miktardan çok daha değerli.**
+Nekrozda A hâlâ önde → hibrit hâlâ mantıklı; Roboflow petchs (bası+eskar, 310) gelirse en güçlü sonraki adım.
+
 ## SON DEVAM (2026-09-29, 2) — Doku tespiti A (etiketsiz renk) vs B (DFUTissue etiketli)
 
 `training/tissue_ab_compare.py` → `runs/tissue_ab/report.json`, `montage.png`, `logs/tissue_ab.log`.

@@ -32,6 +32,9 @@ NET_TO_AB = {3: np.array([2, 1, 4], np.uint8), 4: np.array([2, 1, 4, 3], np.uint
 
 LUTSEG = Path("data/corpus/lutseg")
 WOUNDTISSUE = Path("data/corpus/woundtissue")
+FIGSHARE = Path("data/corpus/figshare_pu2")
+# Figshare 17206940 LabelMe polygons -> ab ids, painted in this order (later wins); "Ulceration" = wound outline only
+_FIG_ORDER = [("Ulceration", 255), ("Re-ep", 4), ("slough tissue", 2), ("Granulation", 1), ("Eschar", 3)]
 # LUTSeg ids: 0 bg, 1 epithelial, 2 slough, 3 granulation, 4 necrotic, 5 other, 255 ignore -> ab ids (255 = ignore)
 _LUT_TO_AB = np.full(256, 255, np.uint8)
 _LUT_TO_AB[[0, 1, 2, 3, 4]] = [0, 4, 2, 1, 3]
@@ -99,7 +102,23 @@ def _target(crop_label, reg, n_cls):
     return t
 
 
-def samples(multi: bool = False):
+def figshare_items():
+    import json
+
+    for f in sorted(FIGSHARE.glob("*.json")):
+        d = json.loads(f.read_text())
+        img = cv2.imread(str(FIGSHARE / d["imagePath"]))
+        if img is None:
+            continue
+        lab = np.zeros(img.shape[:2], np.uint8)
+        for name, ab in _FIG_ORDER:
+            for sh in d["shapes"]:
+                if sh["label"] == name and len(sh["points"]) >= 3:
+                    cv2.fillPoly(lab, [np.array(sh["points"], np.int32)], int(ab))
+        yield f.stem, img, lab
+
+
+def samples(multi: bool = False, figshare: bool = False):
     """(name, crop, target, is_internal_val). DFUT: every 6th TrainVal image is internal val."""
     n_cls = 4 if multi else 3
     out = []
@@ -134,6 +153,11 @@ def samples(multi: bool = False):
             continue
         crop, creg, (g,), _ = crop_resize(img, reg, ab)
         out.append((f"woundtissue/{p.stem}", crop, _target(g, creg, n_cls), False))
+    if figshare:
+        for name, img, lab in figshare_items():
+            reg = lab != 0
+            crop, creg, (g,), _ = crop_resize(img, reg, lab)
+            out.append((f"figshare/{name}", crop, _target(g, creg, n_cls), False))
     return out
 
 
@@ -175,11 +199,12 @@ def main() -> None:
     ap.add_argument("--lr", type=float, default=3e-4)
     ap.add_argument("--out", required=True)
     ap.add_argument("--multi", action="store_true", help="add LUTSeg + WoundTissue and a 4th class (necrosis)")
+    ap.add_argument("--figshare", action="store_true", help="also add the 20 Figshare pressure-ulcer polygons")
     args = ap.parse_args()
     torch.manual_seed(args.seed)
     rng = np.random.default_rng(args.seed)
 
-    items = samples(args.multi)
+    items = samples(args.multi, args.figshare)
     val = [x for x in items if x[3]]
     train = [x for x in items if not x[3]]
     n_cls = 4 if args.multi else 3
