@@ -25,6 +25,27 @@ yama × 192 boyut, 6 katman, 5 kanal). Dizüstü ölçeğinde rastgele başlang�
 **Git:** `claude/sorbed-details-heuk41`. Staj raporları (`STAJ_RAPORU_*.md/.docx`) bilerek git dışında
 (`.git/info/exclude`); `.claude/settings.json` kişisel, commit edilmez.
 
+## ÖN-KAYIT — segmenter v2 (2026-10-17, eğitimden önce; kullanıcı onayladı)
+Veri: combined_v1 tarifinin aynısı (FUSeg train, CO2Wounds train/val, DFUTissue TrainVal) **iki değişiklikle**:
+(a) DFUTissue seg etiketi yalnız sınıf 1–2 (fibrin+granülasyon = yara yatağı; kallus 3 hariç), (b) + petchs train
+(test kopyaları hariç) yara bölgesi = evre çizgisi ∪ doku poligonları; petchs valid → val. Hariç (sızıntı):
+FUSeg val, CWDB 27, petchs test. Yakın-kırpma artırması aynı ayarla. Eğitim: combined_v1 best.pt'den fine-tune,
+imgsz 640, 20 epoch, patience 8, mps; seçim val (best.pt). Ölçüm (tek sefer): "yalnız v2" maskesi CWDB (konsensüs),
+petchs-test, Figshare (gel.-2) ve DFUT Test (yalnız yara yatağı GT) Dice; karşılaştırma old-first ve yalnız v1.
+Başarı ölçütü (önceden): CWDB ≥ 0.85 VE petchs-test ≥ 0.75 → üretim kuralı "yalnız v2" olur; değilse olmaz.
+**SONUÇ — BAŞARISIZ** (`runs/segment/runs/segment/combined_v2/weights/best.pt` = epoch 1 (YOLO fitness), erken durma
+epoch 9; `runs/segment/combined_v2_eval.json`). Dice ort/medyan:
+| | CWDB 27 | petchs-test 31 | Figshare 20 | DFUT Test yatak 16 |
+|---|---|---|---|---|
+| eski-önce (üretim) | **0.865**/0.913 | 0.359/0.353 | 0.830/0.908 | **0.859**/0.928 |
+| yalnız v1 | 0.747/0.837 | 0.766/0.815 | **0.883**/0.941 | 0.509/0.475 |
+| yalnız v2 | 0.670/0.792 | **0.828**/0.912 | 0.857/0.930 | 0.618/0.681 |
+CWDB'de v2 TAŞIYOR (isabet medyan 0.66, kapsama 1.00, alan 1.51×; #7/#27/#9/#3'te neredeyse tüm kare, #27'de cetvel).
+**Neden — tanım farkı:** petchs "evre çizgisi" açık yara + çevresindeki kızarık/renk değiştirmiş KAPALI deriyi
+kapsıyor (Evre 1 görüntülerinde açık yara yok); CWDB yalnız AÇIK yara yüzeyi. v2 "lezyon alanı"nı öğrendi
+(`runs/audit/v2_cwdb_overflow.png`, `petchs_outline_vs_tissue.png`). = 8 Eylül'deki intact_lesion vs open_surface
+ayrımı. Üretim kuralı DEĞİŞMEDİ. Not: evre çizgisi (lezyon alanı) Evre 1/DTI için ayrıca değerli olabilir.
+
 ## SON DEVAM (2026-10-17) — Maske yakın çekim sorunu: neden + kural seçimi
 
 **Neden (geliştirme = petchs train+valid 277, test kopyaları hariç; yara karenin medyan %71'i):** eski FUSeg modeli
