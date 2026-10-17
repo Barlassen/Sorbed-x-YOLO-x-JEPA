@@ -176,6 +176,39 @@ def method_b(rf, bgr, region):
     return lbl
 
 
+MASK_RULES = ("old-first", "ratio", "union", "new")
+
+
+def _yolo_mask(model, bgr, conf=0.01):
+    r = model.predict(bgr, conf=conf, verbose=False, retina_masks=True)[0]
+    if r.masks is None or not len(r.masks.data):
+        return np.zeros(bgr.shape[:2], bool)
+    u = r.masks.data.cpu().numpy().max(0)
+    if u.shape != bgr.shape[:2]:
+        u = cv2.resize(u.astype(np.float32), (bgr.shape[1], bgr.shape[0]), interpolation=cv2.INTER_NEAREST)
+    return u > 0.5
+
+
+def wound_mask(segs, bgr, rule="old-first", ratio=0.75):
+    """Our wound mask from (old FUSeg model, new combined model).
+
+    old-first: old model, new one only if old finds nothing (2026-09-11 rule; fails on close-ups, where the
+               old model marks only small red islands).
+    ratio:     old mask unless it is smaller than `ratio` x the new mask (or empty) -> new (2026-10-17 rule).
+    union / new: the alternatives compared on the development sets.
+    """
+    old, new = segs
+    mo = _yolo_mask(old, bgr)
+    if rule == "old-first" and mo.any():
+        return mo
+    mn = _yolo_mask(new, bgr)
+    if rule == "old-first" or rule == "new":
+        return mn
+    if rule == "union":
+        return mo | mn
+    return mn if (not mo.any() or mo.sum() < ratio * mn.sum()) else mo
+
+
 # ---------------------------------------------------------------- scoring
 def inter_sums(pred, gt, region):
     """[class] -> (intersection, |pred|+|gt|) restricted to region, for G/S/N."""
@@ -209,6 +242,7 @@ def main() -> None:
     ap.add_argument("--out", default="runs/tissue_ab")
     ap.add_argument("--boot", type=int, default=2000)
     ap.add_argument("--cnn", nargs="*", default=[], help="B-CNN checkpoints from train_tissue_cnn (one per seed)")
+    ap.add_argument("--mask-rule", choices=MASK_RULES, default="old-first", help="how R2 builds our wound mask")
     args = ap.parse_args()
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -262,14 +296,7 @@ def main() -> None:
     segs = (YOLO(SEG_OLD), YOLO(SEG_NEW))
 
     def our_mask(bgr):
-        for m in segs:
-            r = m.predict(bgr, conf=0.01, verbose=False, retina_masks=True)[0]
-            if r.masks is not None and len(r.masks.data):
-                u = r.masks.data.cpu().numpy().max(0)
-                if u.shape != bgr.shape[:2]:
-                    u = cv2.resize(u.astype(np.float32), (bgr.shape[1], bgr.shape[0]), interpolation=cv2.INTER_NEAREST)
-                return u > 0.5
-        return np.zeros(bgr.shape[:2], bool)
+        return wound_mask(segs, bgr, args.mask_rule)
 
     R = {s: {m: [] for m in methods} for s in ("R1", "R2")}
     human = []

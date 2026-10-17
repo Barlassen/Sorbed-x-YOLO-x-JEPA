@@ -25,6 +25,32 @@ yama × 192 boyut, 6 katman, 5 kanal). Dizüstü ölçeğinde rastgele başlang�
 **Git:** `claude/sorbed-details-heuk41`. Staj raporları (`STAJ_RAPORU_*.md/.docx`) bilerek git dışında
 (`.git/info/exclude`); `.claude/settings.json` kişisel, commit edilmez.
 
+## SON DEVAM (2026-10-17) — Maske yakın çekim sorunu: neden + kural seçimi
+
+**Neden (geliştirme = petchs train+valid 277, test kopyaları hariç; yara karenin medyan %71'i):** eski FUSeg modeli
+Dice medyan **0.14**, çizdiği alan gerçek yaranın medyan **%8'i** (yalnız kırmızı adacıklar); yeni birleşik model
+**0.83**. Şimdiki "eski-önce" kuralı 0.22: eski model küçük bir şey bulunca yeni model hiç çağrılmıyor.
+Geliştirme-2 (Figshare 20, uzak çekim, yara payı %13; segmenter eğitiminde yok): eski 0.91, yeni 0.94.
+| kural (Dice medyan) | petchs dev | Figshare |
+|---|---|---|
+| eski-önce (şimdiki) | 0.22 | 0.91 |
+| yeni | 0.83 | 0.94 |
+| birleşim | 0.83 | 0.94 |
+| oran<0.75→yeni (eski alan < 0.75×yeni alan ise yeni, değilse eski) | 0.82 | 0.94 |
+**ÖN-KAYIT (cetvellere bakmadan):** birincil kural = `oran<0.75→yeni` (geliştirmede birleşimle berabere; CWDB'de
+yeni modelin kallus taşması bilindiği için boyutlar benzerken eski maskeyi koruyan kural seçildi — bu bilgi daha
+önce CWDB'den geldi, şeffaflık için not). İkincil = birleşim. Ölçüm: CWDB mask Dice (konsensüse), petchs-test mask
+Dice (etiketçi sınırı), ve doku R2 (PS CNN 3 seed + A) iki cetvelde. Kural değiştirilmeyecek.
+**SONUÇ (mask Dice ort / medyan):** old-first CWDB 0.865/0.913, petchs-test 0.359/0.353; **ratio(0.75)** CWDB
+0.770/0.886, petchs-test **0.761/0.815**; union 0.748/0.837 · 0.769/0.815. → Ön-kayıtlı kural yakın çekimi düzeltti
+ama CWDB'yi bozdu. KEŞİF (sonuçtan sonra, kanıt değil): CWDB'de eski/yeni alan oranı medyan 0.74 (yeni model kallus
+taşması) → eşik 0.75 15/27 görüntüyü yeniye çeviriyor (ör. #27 eski 0.76 → yeni 0.19). Eşik 0.5: 0.805 · 0.732;
+0.25: 0.843 · 0.670 → tek eşik iki tarafı kurtarmıyor. **Teşhis:** eski model yakın çekimde yalnız kırmızıyı çiziyor,
+yeni model kallusa taşıyor (DFUTissue seg etiketlerinin %59'u kallus, 2026-09-11 bulgusu, düzeltme onay bekliyor).
+**Önerilen kalıcı çözüm (kullanıcı onayı bekliyor):** yeni modeli (a) kallussuz DFUTissue seg etiketleri + (b) petchs
+train+valid yara sınırları (test ayrı kalır) ile kısa fine-tune (~2–3 sa), sonra "yalnız yeni model"i CWDB + petchs
+test'te ölç. Üretim kuralı DEĞİŞTİRİLMEDİ (old-first); `--mask-rule` yalnız ölçüm betiklerinde seçenek.
+
 ## SON DEVAM (2026-10-13, 2) — Roboflow setleri: denetim + ikinci cetvel
 
 Kullanıcı 4 zip indirdi → `data/corpus/rf_{petchs,segulcer,wuxi4,wuxi2}` (hepsi CC BY 4.0). dHash (≤6): cetvellere

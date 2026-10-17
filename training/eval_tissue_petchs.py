@@ -17,7 +17,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from training.tissue_ab_compare import BG, G, SEG_NEW, SEG_OLD, boot, crop_resize, fmt, inter_sums, method_a, paste, pooled
+from training.tissue_ab_compare import BG, G, MASK_RULES, SEG_NEW, SEG_OLD, wound_mask, boot, crop_resize, fmt, inter_sums, method_a, paste, pooled
 from training.train_tissue_cnn import RF_PETCHS, coco_items, load, predict
 
 HUE0 = 38  # A's only parameter, tuned on DFUTissue TrainVal (tissue_ab_compare); not re-tuned here
@@ -28,6 +28,7 @@ def main() -> None:
     ap.add_argument("--cnn", nargs="*", default=[])
     ap.add_argument("--boot", type=int, default=2000)
     ap.add_argument("--out", default="runs/tissue_petchs/report.json")
+    ap.add_argument("--mask-rule", choices=MASK_RULES, default="old-first")
     args = ap.parse_args()
 
     methods = {"A": lambda im, r: method_a(im, r, HUE0),
@@ -41,14 +42,7 @@ def main() -> None:
     segs = (YOLO(SEG_OLD), YOLO(SEG_NEW))
 
     def our_mask(bgr):
-        for m in segs:
-            r = m.predict(bgr, conf=0.01, verbose=False, retina_masks=True)[0]
-            if r.masks is not None and len(r.masks.data):
-                u = r.masks.data.cpu().numpy().max(0)
-                if u.shape != bgr.shape[:2]:
-                    u = cv2.resize(u.astype(np.float32), (bgr.shape[1], bgr.shape[0]), interpolation=cv2.INTER_NEAREST)
-                return u > 0.5
-        return np.zeros(bgr.shape[:2], bool)
+        return wound_mask(segs, bgr, args.mask_rule)
 
     R = {s: {m: [] for m in methods} for s in ("R1", "R2")}
     n_img = 0
