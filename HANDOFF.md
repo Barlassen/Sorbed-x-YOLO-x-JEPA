@@ -25,6 +25,29 @@ yama × 192 boyut, 6 katman, 5 kanal). Dizüstü ölçeğinde rastgele başlang�
 **Git:** `claude/sorbed-details-heuk41`. Staj raporları (`STAJ_RAPORU_*.md/.docx`) bilerek git dışında
 (`.git/info/exclude`); `.claude/settings.json` kişisel, commit edilmez.
 
+## 🔎 MASKE HATTI TEŞHİS RAPORU (2026-10-20)
+1. **Eğitim neden "öğrenmeden" duruyor:** optimizer=auto → AdamW lr0 0.002 (v1'in en iyi epoch'undaki lr 0.0004'ün
+   5×), warmup 3 epoch lr'yi 0.0007→0.0018'e çıkarıyor; lr arttıkça TRAIN kaybı da artıyor (v2 box 1.13→1.25, seg
+   1.99→2.06) = adım fazla büyük. Epoch 1 gerçekten iyileştiriyor (v1 eğitimsiz val fitness 0.894 → v2 ep1 0.958;
+   v3 val 0.638 → 0.686), sonra bozuluyor; patience 8, lr yeniden düşmeden eğitimi kesiyor.
+2. **Modeller kendinden emin değil; conf 0.01 + tüm parçaların birleşimi bir koltuk değneği:** petchs dev'de v3
+   medyan 45 parça/görüntü; conf 0.25'te v3 0.77→0.21, v1 0.71→0.48. CWDB'de tek parça (top1) v3'ü 0.75→0.82, v1'i
+   0.75→0.78 yapıyor → CWDB taşmasının bir kısmı düşük güvenli fazladan parçalar (cetvel, çevre deri).
+3. **Veri bileşimi:** v1 eğitiminde HİÇ bası yarası yok (FUSeg ayak 786, CO2 lepra 460, DFUT ayak 80); v3'te bası
+   %12. Val (model seçimi) %76 CO2 lepra → seçim bası yarasına göre değil. FUSeg orijinallerinde yara karenin
+   medyan %1'i. Not: v1 yakın-kırpma 2541 (≈2 kopya), v2/v3 1446 (1 kopya) → "aynı tarif" birebir değildi.
+4. **Etiket tanımları tutarsız:** DFUT (eski: kallus dahil), petchs evre çizgisi (lezyon alanı) vs doku (açık
+   yüzey), CWDB açık yüzey → model kaynağa göre farklı "yara" öğreniyor.
+5. **Ölçüm kırılgan:** eski FUSeg modeli v2/v3 val'de mask mAP50 0.17–0.19, petchs'te 0.22–0.36 ama CWDB 27'de
+   0.865 ve DFUT yatakta 0.859 (ikisi de AZH/FUSeg'e benzer çekim) → maske kararları 27 görüntülük tek cetvele aşırı
+   bağlı.
+6. **Yapısal:** YOLO örnek-segmentasyonu (kutu + parça) "tek bölge" olan yara için zorlanıyor: kareyi dolduran yarada
+   kutu = tüm kare, yara çok parçaya bölünüyor. Piksel-sınıflandırma (semantik; doku CNN'iyle aynı DeepLab) daha
+   uygun olabilir.
+Öneri sırası: (a) bası maske doğrulama seti (petchs train/valid doku + Figshare; seçim buna göre), (b) eğitim:
+lr ~1e-4, warmup 0, kosinüs, patience ≥15, train kaybının düştüğünü kontrol, (c) tek "açık yüzey" tanımı + bası payını
+artırma, (d) conf/birleştirme kuralını gel. setinde seçme, (e) semantik maske modeli (DeepLab) karşılaştırması.
+
 ## ÖN-KAYIT — segmenter v3 (2026-10-20, eğitimden önce; kullanıcı onayladı)
 v2 ile TEK fark: petchs yara bölgesi = yalnız doku poligonları (granulation ∪ slough ∪ eschar = açık yüzey); evre
 çizgisinin geri kalanı (kapalı renk değişmiş deri) arka plan. Doku poligonu olmayan petchs görüntüleri (yalnız evre
