@@ -25,6 +25,26 @@ yama × 192 boyut, 6 katman, 5 kanal). Dizüstü ölçeğinde rastgele başlang�
 **Git:** `claude/sorbed-details-heuk41`. Staj raporları (`STAJ_RAPORU_*.md/.docx`) bilerek git dışında
 (`.git/info/exclude`); `.claude/settings.json` kişisel, commit edilmez.
 
+## ÖN-KAYIT — segmenter v3 (2026-10-20, eğitimden önce; kullanıcı onayladı)
+v2 ile TEK fark: petchs yara bölgesi = yalnız doku poligonları (granulation ∪ slough ∪ eschar = açık yüzey); evre
+çizgisinin geri kalanı (kapalı renk değişmiş deri) arka plan. Doku poligonu olmayan petchs görüntüleri (yalnız evre
+çizgisi; Evre 1 vb.) DIŞLANIR — negatif örnek yapılmaz, çünkü doku çizilmemiş sığ açık yara içerebilirler. Geri
+kalan her şey v2 ile aynı (veri, hariç tutulanlar, yakın-kırpma, combined_v1 best.pt'den, 20 epoch, patience 8,
+seçim best.pt). Başarı ölçütü: CWDB ≥ 0.85 VE petchs-test ≥ 0.75, petchs-test GT = **yalnız doku poligonları
+(açık yüzey)** — öğretilen tanımla tutarlı olsun diye (sonuç görülmeden, yazım sırasında düzeltildi). Evre çizgisi
+∪ doku GT'si ikincil olarak raporlanır. Diğer setler (Figshare, DFUT yatak) v2 ile aynı.
+**SONUÇ — BAŞARISIZ** (`combined_v3/weights/best.pt` = yine epoch 1, erken durma epoch 9; `runs/segment/combined_v3_eval.json`).
+Dice ort/medyan — eski-önce | v1 | v2 | **v3**: CWDB 0.865 | 0.747 | 0.670 | **0.749**/0.831 · petchs açık yüzey
+(birincil) 0.346 | 0.463 | 0.469 | **0.526**/0.509 · petchs lezyon (ikincil) 0.417 | 0.759 | 0.846 | 0.774 · Figshare
+0.830 | 0.883 | 0.857 | **0.893** · DFUT yatak 0.859 | 0.509 | 0.618 | **0.850**/0.932.
+Teşhis: CWDB'de v3 = v1 (isabet 0.73, alan 1.36× — aynen) → **v2 ve v3'te en iyi epoch 1: ek eğitim neredeyse hiç
+işlemedi** (optimizer=auto → SGD lr 0.01 + warmup; sonraki epoch'larda val düşüyor, seçim ilk epoch'u tutuyor).
+Tek belirgin kazanç DFUT yatak 0.51→0.85: kallussuz etiket kısa eğitimde bile v1'in kallus taşmasını gideriyor.
+petchs açık yüzeyde TÜM modeller ~2.3× alan çiziyor (isabet ≈0.35) → ya modeller kapalı renk değişmiş deriyi de
+boyuyor ya da petchs doku poligonları açık alanın tamamını kapsamıyor; ayırt edilemedi.
+Üretim kuralı DEĞİŞMEDİ (old-first). Sonraki aday: eğitim yöntemini düzeltmek (düşük lr ince ayar, ör. AdamW
+lr 1e-4 / SGD lr 0.001, warmup 0, daha uzun sabır), yine ön-kayıtla.
+
 ## ÖN-KAYIT — segmenter v2 (2026-10-17, eğitimden önce; kullanıcı onayladı)
 Veri: combined_v1 tarifinin aynısı (FUSeg train, CO2Wounds train/val, DFUTissue TrainVal) **iki değişiklikle**:
 (a) DFUTissue seg etiketi yalnız sınıf 1–2 (fibrin+granülasyon = yara yatağı; kallus 3 hariç), (b) + petchs train

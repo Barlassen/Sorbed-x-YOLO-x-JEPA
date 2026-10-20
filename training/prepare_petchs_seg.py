@@ -21,6 +21,10 @@ from training.train_tissue_cnn import RF_PETCHS, coco_items, petchs_test_dups
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--out", required=True, type=Path)
+    ap.add_argument("--region", choices=("outline", "tissue"), default="outline",
+                    help="outline = stage outline + tissue (whole lesion, incl. intact discoloured skin); "
+                         "tissue = granulation/slough/eschar polygons only (open wound surface). Images without "
+                         "any tissue polygon are skipped in 'tissue' mode.")
     args = ap.parse_args()
     dups = petchs_test_dups()
     for src, split in (("train", "train"), ("valid", "val")):
@@ -28,7 +32,8 @@ def main() -> None:
         (args.out / "labels" / split).mkdir(parents=True, exist_ok=True)
         n = empty = 0
         for name, img, lab in coco_items(RF_PETCHS, src, dups):
-            polys = mask_to_polygons(((lab != 0) * 1).astype("uint8"))
+            region = (lab != 0) if args.region == "outline" else ((lab >= 1) & (lab <= 3))
+            polys = mask_to_polygons(region.astype("uint8"))
             if not polys:
                 empty += 1
                 continue
