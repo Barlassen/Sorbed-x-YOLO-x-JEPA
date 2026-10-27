@@ -45,6 +45,27 @@ eşikleri / Sorbed'in öğrenilmiş GBM başlığı) her ayar YALNIZ petchs trai
 **Beklenti** (yalnız etiket istatistiğinden, model çıktısı görülmeden): motor Evre 4'ü veremez (kas/tendon/kemik
 sınıfı üreten doku modeli yok); granülasyonu Evre 3'e bağlıyor, oysa petchs'te granülasyon Evre 4'ün %98'inde, Evre
 3'ün %44'ünde; U'da slough medyanı ~%40 < motorun %50 eşiği.
+**SONUÇ — mevcut motor bası fotoğraflarında kullanılamaz** (`runs/staging/step1.json`). valid+test n=62 (1:4, 2:8,
+3:36, 4:10, U:4). Doğruluk / dengeli doğruluk [%95 GA] / tam-kısmi kat / evresiz oranı:
+| | doğruluk | dengeli | tam/kısmi | evresiz |
+|---|---|---|---|---|
+| hep "Evre 3" (önemsiz) | 0.58 | 0.20 | 0.81 | 0 |
+| R1 GT bölge × renk (üretim dokusu) | 0.02 | 0.01 | 0.11 | **0.85** |
+| R1 GT bölge × CNN-PS | 0.29 | 0.23 | 0.81 | 0.02 |
+| R2 old-first × renk (= üretim) | 0.07 | 0.07 | 0.27 | 0.68 |
+| R2 old-first × CNN-PS | **0.45** [0.32,0.58] | **0.29** [0.16,0.36] | 0.76 | 0.10 |
+| R2 DeepLab-v4 × renk | 0.05 | 0.02 | 0.18 | 0.81 |
+| R2 DeepLab-v4 × CNN-PS | 0.24 | 0.22 | 0.79 | 0.03 |
+Test (31) aynı tablo; train (245, sızıntısız renk kolları) doğruluk 0.04/0.06 → aynı tablo. Hiçbir kombinasyon
+önemsiz "hep 3" doğruluğunu geçmiyor; motor 1, 2 ve 4'ü (neredeyse) hiç vermiyor.
+**Neden (keşif, sonuçtan sonra):** (1) **Kural ağacında boşluk:** açık yara + granülasyon < %15 + slough/eskar
+%10–50 → hiçbir kural tetiklenmiyor ("belirsiz"); renk kolunda 62'nin 42'si bu. NPIAP'e göre görünür ama tabanı
+örtmeyen slough/eskar Evre 3 ile uyumlu → kural eksik. (2) **Renk modeli bu fotoğraflarda eskarı abartıyor**
+(R1 medyan: eskar %27, granülasyon %1 — gölge/koyu piksel = eskar). (3) **Evre 4'e yol yok:** kas/tendon/kemik
+üreten doku modeli yok (NPIAP gereği de fotoğraftan zor). (4) **Evre 1/2 kuralları** eritem/epitel ipuçlarına
+dayanıyor; bunlar ~0 çıkıyor → CNN kolunda 1/2 → 3 ya da U. (5) CNN-PS + GT bölge 36 Evre 3'ün 21'ini U yapıyor
+(GT evre çizgisi çevre deriyi de içeriyor → slough oranı/eşik etkileşimi).
+Not: petchs tek etiketleyici, etiket kalitesi denetlenmedi; Evre 3 vs 4 ayrımı fotoğraftan tanım gereği sınırlı.
 
 ## ÖN-KAYIT — maske v4 programı (2026-10-21, her şeyden önce; kullanıcı onayladı)
 **Tanım:** yara = AÇIK YÜZEY (CWDB ile aynı). **Bası doğrulama seti (seçim yalnız buna göre):** petchs valid doku
