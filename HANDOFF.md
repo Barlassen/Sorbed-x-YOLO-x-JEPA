@@ -42,6 +42,23 @@ Final: old-first vs YOLO-v4 vs DeepLab (+ v1). Eğitim kaybının düştüğü h
 4.18→3.50. Epoch Dice (conf 0.01, hepsi): v1 0.627, eski 0.480, v4 epoch 1 0.663 … **epoch 19 0.692 (seçildi;
 `yolo_v4/weights/epoch18.pt`, 0-tabanlı)**; `runs/segment/yolo_v4_epoch_dice.json`. Çıkarım kuralı: conf 0.01 hepsi 0.692,
 top1 0.665; **conf 0.1 hepsi 0.719 (seçildi)**, top1 0.646; conf 0.25 0.663/0.619. Medyan 11.5 parça/görüntü.
+DeepLab-v4: train kaybı 0.83→0.35 düzenli düştü; bası doğrulama Dice 0.63 → **0.750 (epoch 19, seçildi)**
+(`runs/wound_deeplab/v4.pt`, log `logs/wound_deeplab_v4.log`).
+**SONUÇ — BAŞARISIZ (ölçüt tutmadı), ama büyük ilerleme** (`python -m training.eval_wound_masks`,
+`runs/segment/mask_v4_final.json`). Dice ort/medyan (isabet · kapsama · alan, medyan):
+| | CWDB 27 | petchs-test açık yüzey 26 | DFUT Test yatak 16 |
+|---|---|---|---|
+| eski-önce (üretim) | **0.865**/0.913 (0.93·0.97·1.04×) | 0.346/0.278 (0.39·0.32·1.00×) | 0.859/0.928 |
+| yalnız v1 | 0.747/0.837 (0.73·1.00·1.36×) | 0.463/0.464 (0.37·0.95·2.44×) | 0.509/0.475 |
+| YOLO-v4 | 0.786/0.860 (0.81·1.00·1.23×) | 0.589/0.653 (0.70·0.75·1.19×) | **0.933**/0.948 |
+| DeepLab-v4 | 0.782/0.876 (0.79·1.00·1.26×) | **0.667**/0.695 (0.68·0.85·1.28×) | 0.855/0.932 |
+İkisi de CWDB ≥ 0.85'i tutmuyor, petchs-test ≥ 0.75'i de tutmuyor → **üretim kuralı DEĞİŞMEDİ (old-first)**.
+Kazanç: bası açık yüzeyde 0.35 → 0.67 (DeepLab; ~2×), YOLO-v4 DFUT'ta 0.93 (v1'in kallus taşması bitti), eğitim
+ilk kez gerçekten öğrendi (teşhis 1 doğrulandı). Kayıp: CWDB'de yeni modeller eski modelden ~0.08 düşük.
+Keşif (sonuçtan sonra bakıldı; `runs/audit/mask_v4_cwdb_misses.png`): CWDB kaybı 4 görüntüde (#3, #9, #18, #27;
+YOLO'da +#20). Yeni modeller kaçırmıyor (kapsama 1.00), **taşıyor**: uzmanlar yalnız çiğ açık yüzeyi dar çiziyor
+(#9'da ayrı adacıklar), modeller yara kenarındaki pembe epitel/maserasyon halkasını da dahil ediyor. Yani kalan
+fark çoğunlukla "yara sınırı nereden geçer" tanımı; eğitim etiketleri (petchs doku, segulcer, FUSeg) CWDB'den gevşek.
 
 ## 🔎 MASKE HATTI TEŞHİS RAPORU (2026-10-20)
 1. **Eğitim neden "öğrenmeden" duruyor:** optimizer=auto → AdamW lr0 0.002 (v1'in en iyi epoch'undaki lr 0.0004'ün
