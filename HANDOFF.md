@@ -25,6 +25,27 @@ yama × 192 boyut, 6 katman, 5 kanal). Dizüstü ölçeğinde rastgele başlang�
 **Git:** `claude/sorbed-details-heuk41`. Staj raporları (`STAJ_RAPORU_*.md/.docx`) bilerek git dışında
 (`.git/info/exclude`); `.claude/settings.json` kişisel, commit edilmez.
 
+## ÖN-KAYIT — evreleme adım 1: mevcut Sorbed motorunun ölçümü (2026-10-28, model çıktısı görülmeden)
+**Soru:** `src/sorbed/staging` kural motoru (varsayılan eşikler, HİÇ değiştirilmeden) bası fotoğraflarında evreyi
+ne kadar doğru veriyor; hata bölgeden (maske) mi, dokudan mı, kurallardan mı geliyor?
+**Etiket:** petchs (Roboflow, CC BY 4.0, tek etiketleyici) evre poligonları. Görüntünün evresi = en yüksek evre
+(çok-evreli görüntülerin hepsinde poligonlar üst üste → tek yaranın bölgeleri); `unstageable` varsa (evre 4 yoksa) U.
+**Değerlendirme seti (birincil):** petchs valid + test (test kopyası olan valid görüntüleri hariç); test ayrıca
+raporlanır. Not: valid, DeepLab-v4 ve CNN-PS için epoch seçiminde kullanıldı (eğitimde değil) → hafif iyimser.
+**İkincil:** petchs train (test kopyaları hariç) yalnız sızıntısız kombinasyonlarda (renk modeli × {GT bölge, old-first}).
+**Kombinasyonlar:** bölge {R1 = GT evre çizgisi ∪ doku poligonları, R2 = old-first (üretim), R2 = DeepLab-v4} ×
+doku {Sorbed renk modeli (üretim; gray-world normalize), CNN-PS seed0 (G/S/N/O → granülasyon/slough/eskar/epitel)}.
+Renk ipuçları (maroon, eritem) her iki doku kolunda da renk modelinden. seg_confidence = 1 (kural mantığı ölçülür,
+güven kapısı değil); çıktı = motorun `rule_stage`'i (kural yoksa "belirsiz").
+**Ölçüler:** 5 sınıf (1, 2, 3, 4, U) doğruluk + dengeli doğruluk (sınıf başına doğru oranlarının ortalaması) +
+karışıklık matrisi; ikili "tam kat (3/4/U) vs kısmi kat (1/2)" doğruluğu. DTI/belirsiz çıktılar yanlış sayılır, oranı
+ayrıca. Önemsiz taban: hep "Evre 3". Görüntü bootstrap %95 GA.
+**Bu adım karar vermez** (geçme çizgisi yok): evre hatasını hangi halkanın sürüklediğini gösterir. Adım 2'de (kural
+eşikleri / Sorbed'in öğrenilmiş GBM başlığı) her ayar YALNIZ petchs train'de yapılır; test bir kez daha ölçülür.
+**Beklenti** (yalnız etiket istatistiğinden, model çıktısı görülmeden): motor Evre 4'ü veremez (kas/tendon/kemik
+sınıfı üreten doku modeli yok); granülasyonu Evre 3'e bağlıyor, oysa petchs'te granülasyon Evre 4'ün %98'inde, Evre
+3'ün %44'ünde; U'da slough medyanı ~%40 < motorun %50 eşiği.
+
 ## ÖN-KAYIT — maske v4 programı (2026-10-21, her şeyden önce; kullanıcı onayladı)
 **Tanım:** yara = AÇIK YÜZEY (CWDB ile aynı). **Bası doğrulama seti (seçim yalnız buna göre):** petchs valid doku
 poligonları (24) + Figshare açık ülser (20; Ulceration ∪ doku, Re-ep hariç) = 44. **Final test (bir kez):** CWDB 27
