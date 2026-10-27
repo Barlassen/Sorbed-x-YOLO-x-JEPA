@@ -25,6 +25,24 @@ yama × 192 boyut, 6 katman, 5 kanal). Dizüstü ölçeğinde rastgele başlang�
 **Git:** `claude/sorbed-details-heuk41`. Staj raporları (`STAJ_RAPORU_*.md/.docx`) bilerek git dışında
 (`.git/info/exclude`); `.claude/settings.json` kişisel, commit edilmez.
 
+## ÖN-KAYIT — maske v4 programı (2026-10-21, her şeyden önce; kullanıcı onayladı)
+**Tanım:** yara = AÇIK YÜZEY (CWDB ile aynı). **Bası doğrulama seti (seçim yalnız buna göre):** petchs valid doku
+poligonları (24) + Figshare açık ülser (20; Ulceration ∪ doku, Re-ep hariç) = 44. **Final test (bir kez):** CWDB 27
+(konsensüs), petchs test doku GT (26), DFUT Test yara yatağı (16). Başarı: CWDB ≥ 0.85 VE petchs-test ≥ 0.75 → üretim.
+**Eğitim verisi:** FUSeg train (rastgele 300, seed 0), CO2 train (rastgele 300), DFUT yatak (80), petchs train doku
+(184), Segmentation-ulcer train+valid (tüm poligonlar = yara; 195) + yakın-kırpma 1 kopya. Hariç: FUSeg val, CWDB,
+petchs test, segulcer test.
+**YOLO-v4:** v1 best.pt'den; AdamW lr0 2e-4, warmup 0, cos_lr, 25 epoch, erken durma kapalı, her epoch kaydı; epoch
+seçimi bası doğrulamada Dice ile (conf 0.01, tüm parçalar). Sonra çıkarım kuralı ({0.01,0.1,0.25} × {hepsi, top1})
+yine bası doğrulamada seçilir.
+**DeepLab-maske:** DeepLabV3-MobileNetV3 (COCO), 2 sınıf, aynı eğitim verisi, tam görüntü 512 letterbox, 25 epoch,
+epoch seçimi bası doğrulamada Dice; eşik 0.5 (değiştirilmez).
+Final: old-first vs YOLO-v4 vs DeepLab (+ v1). Eğitim kaybının düştüğü her eğitimde kontrol edilir.
+**Ara sonuç (seçimler, yalnız bası doğrulamada):** YOLO-v4 train kaybı düzenli düştü (seg 2.87→2.16), val kaybı
+4.18→3.50. Epoch Dice (conf 0.01, hepsi): v1 0.627, eski 0.480, v4 epoch 1 0.663 … **epoch 19 0.692 (seçildi;
+`yolo_v4/weights/epoch18.pt`, 0-tabanlı)**; `runs/segment/yolo_v4_epoch_dice.json`. Çıkarım kuralı: conf 0.01 hepsi 0.692,
+top1 0.665; **conf 0.1 hepsi 0.719 (seçildi)**, top1 0.646; conf 0.25 0.663/0.619. Medyan 11.5 parça/görüntü.
+
 ## 🔎 MASKE HATTI TEŞHİS RAPORU (2026-10-20)
 1. **Eğitim neden "öğrenmeden" duruyor:** optimizer=auto → AdamW lr0 0.002 (v1'in en iyi epoch'undaki lr 0.0004'ün
    5×), warmup 3 epoch lr'yi 0.0007→0.0018'e çıkarıyor; lr arttıkça TRAIN kaybı da artıyor (v2 box 1.13→1.25, seg
