@@ -25,6 +25,28 @@ yama × 192 boyut, 6 katman, 5 kanal). Dizüstü ölçeğinde rastgele başlang�
 **Git:** `claude/sorbed-details-heuk41`. Staj raporları (`STAJ_RAPORU_*.md/.docx`) bilerek git dışında
 (`.git/info/exclude`); `.claude/settings.json` kişisel, commit edilmez.
 
+## 🔌 ÜRÜNE BAĞLAMA (2026-10-28) — YOLO old-first maske + CNN doku arka ucu
+
+**Ne yapıldı:** `segmentation_backend=yolo` artık yedek modeli (old-first), güven eşiğini ve "en büyük parça"
+filtresini ayardan alıyor (`yolo_seg_*`); retina maskeleri tam çözünürlükte. Yeni `tissue_backend=cnn`
+(`src/sorbed/tissue/cnn_model.py`): CNN ham fotoğraftan doku haritası, maroon/eritem renk modelinden
+(normalize görüntü) — değerlendirmedeki yolun aynısı. Doku ağırlığının SHA-256'sı provenance'a yazılıyor.
+Varsayılanlar ağırlıksız kaldı (classical + color_model; testler ve çevrimdışı çalışma için); doğrulanmış
+yapılandırma README'deki 7 `SORBED_*` satırı. Ürün doku modeli: `runs/tissue_cnn_final/seed0.pt` (aynı tarif,
+tüm petchs kaynakları, `--petchs-holdout-fold -1`; iç doğrulama Dice 0.761 @30, katlar 0.70–0.74).
+**Sadakat kontrolü** (`training/check_product_pipeline.py`, 166 kaynak, her görüntüye kendi katının doku CNN'i):
+maske 166/166 birebir aynı, doku oranları farkı 0, kural evresi (seg güveni 1 iken) %100 aynı → bağlantı doğru.
+**Bulgu — güvenlik kapıları:** gerçek seg güveniyle ürün 141/166 görüntüde "belirsiz" gösteriyor:
+(1) seg güveni < 0.2 → INDETERMINATE kuralı: 123/166 (YOLO güveni = maske pikselleri altındaki tespit skoru
+ortalaması; medyan 0.087); (2) güveni ≥ 0.2 olan 43'te kurallar 21 kez Evre 3 diyor, 16'sı "derinliğe dayalı
+evre, güven < 0.5" çekimserliğiyle gizleniyor. YOLO güveni anlamlı: maske–anotasyon sınırı Dice'ıyla Spearman
+0.45; güven < 0.05 olan 57 görüntüde medyan Dice 0.02 (maske yarayı ıskalıyor), 0.05–0.5 aralığında ~0.3,
+> 0.5'te 0.60. **Düzeltmeler:** (a) adım 2'deki "maske maliyeti küçük" seg güveni 1 varsayımıyla ölçülmüştü;
+kapı açıkken maske asıl darboğaz (166'nın 57'sinde yara bulunamıyor). (b) Ürün eritem 0.15'te → beklenen ürün
+skoru 0.41 değil ~0.34 (iç içe CV 0.336; bu 166'da örneklem-içi 0.349).
+**Açık karar:** kapıyı gevşetmek (veriye bakarak eşik seçmek) yerine kök neden: bası fotoğraflarında maske.
+DeepLab-v4 petchs açık yüzeyde 0.667 (old-first 0.346; temiz alt küme 0.783 vs 0.514).
+
 ## ⚠️ petchs SIZINTISI (2026-10-28) — Roboflow kopyaları bölümler arası
 petchs'te Roboflow, artırılmış kopyaları (çevirme, döndürme, kırpma, renk) BÖLMEDEN ÖNCE üretmiş: dosya adındaki
 kaynak numarası (`20009_jpg.rf.<hash>`) aynı fotoğrafı gösteriyor (`runs/audit/petchs_split_leak.png`). 310 görüntü
@@ -84,7 +106,8 @@ tek başına etkisiz (renk modelinde 42/62 belirsizin kaynağıydı); kazanç e�
 Hata yapısı: A Evre 4'ü veremez (36'nın 24'ü →3, 11'i →U), Evre 3'ün 24/77'sini U yapıyor, Evre 2'nin 11/23'ünü 3.
 B Evre 4'ün 22/36'sını doğru buluyor (kurallar 0) ama U'da zayıf (6/17; A 12/17) → tamamlayıcılar.
 **Ürün uyarısı:** ürün hattı hâlâ `segmentation_backend=classical` + `tissue_backend=color_model`; eşikler CNN dokusu +
-old-first maskeyle ayarlandı. Ürünün evre vermesi için CNN doku arka ucu + YOLO old-first ürüne bağlanmalı (sonraki iş).
+old-first maskeyle ayarlandı. Ürünün evre vermesi için CNN doku arka ucu + YOLO old-first ürüne bağlanmalı
+(→ yapıldı, bkz. "ÜRÜNE BAĞLAMA"; varsayılan hâlâ ağırlıksız, açmak README'de).
 Testler: pytest/hypothesis .venv'de yok (kurulmadı); test_staging 11/11, test_report_pdf 3, test_feedback 2 doğrudan
 çalıştırıldı, uçtan uca analyze_image çalışıyor.
 

@@ -62,7 +62,10 @@ class ColorTissueClassifier:
 
     name = "color_model"
 
-    def classify(self, rgb: np.ndarray, wound_mask: np.ndarray) -> TissueAnalysis:
+    def classify(
+        self, rgb: np.ndarray, wound_mask: np.ndarray, raw_rgb: np.ndarray | None = None
+    ) -> TissueAnalysis:
+        # raw_rgb is unused: the color thresholds want the color-normalized image.
         h, w = wound_mask.shape
         label_map = np.full((h, w), _INDEX[TissueClass.BACKGROUND], dtype=np.int16)
         confidence = np.zeros((h, w), dtype=np.float32)

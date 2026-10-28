@@ -7,12 +7,17 @@ register here and are selected the same way.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from sorbed.config.settings import Settings
 from sorbed.segmentation.base import WoundSegmenter
 from sorbed.segmentation.classical import ClassicalSegmenter
 from sorbed.staging.engine import StagingEngine
 from sorbed.staging.rules import Thresholds
 from sorbed.tissue.color_model import ColorTissueClassifier
+
+if TYPE_CHECKING:
+    from sorbed.tissue.cnn_model import CnnTissueClassifier
 
 
 class UnknownBackendError(RuntimeError):
@@ -41,9 +46,13 @@ def build_segmenter(settings: Settings) -> WoundSegmenter:
     raise UnknownBackendError(f"unknown segmentation backend: {name!r}")
 
 
-def build_tissue_classifier(settings: Settings) -> ColorTissueClassifier:
+def build_tissue_classifier(settings: Settings) -> ColorTissueClassifier | CnnTissueClassifier:
     if settings.tissue_backend == "color_model":
         return ColorTissueClassifier()
+    if settings.tissue_backend == "cnn":
+        from sorbed.tissue.cnn_model import CnnTissueClassifier
+
+        return CnnTissueClassifier.from_settings(settings)
     raise UnknownBackendError(f"unknown tissue backend: {settings.tissue_backend!r}")
 
 

@@ -280,7 +280,7 @@ def main() -> None:
     ap.add_argument("--figshare", action="store_true", help="also add the 20 Figshare pressure-ulcer polygons")
     ap.add_argument("--petchs", action="store_true", help="add Roboflow petchs pressure-ulcer train (+valid as val)")
     ap.add_argument("--segulcer", action="store_true", help="add Roboflow Segmentation-ulcer (coarse, 1 tissue/img)")
-    ap.add_argument("--petchs-holdout-fold", type=int, help="with --petchs: all splits, minus this source fold")
+    ap.add_argument("--petchs-holdout-fold", type=int, help="with --petchs: all splits, minus this source fold (-1 = keep every source: the deployed model)")
     args = ap.parse_args()
     torch.manual_seed(args.seed)
     rng = np.random.default_rng(args.seed)

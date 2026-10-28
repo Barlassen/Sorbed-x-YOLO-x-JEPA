@@ -152,6 +152,20 @@ export SORBED_SEGMENTATION_BACKEND=onnx
 export SORBED_ONNX_MODEL=artifacts/seg_unetpp/model.onnx
 ```
 
+The pressure-injury configuration the staging thresholds were tuned on (see
+`HANDOFF.md`, staging step 2) uses the YOLO "old-first" wound mask and the tissue
+CNN. Its weights are local training outputs under `runs/`, which Git does not track:
+
+```bash
+export SORBED_SEGMENTATION_BACKEND=yolo
+export SORBED_YOLO_SEG_MODEL=runs/segment/runs_wound/yolo26n_fuseg/weights/best.pt
+export SORBED_YOLO_SEG_FALLBACK_MODEL=runs/segment/runs/segment/combined_v1/weights/best.pt
+export SORBED_YOLO_SEG_CONFIDENCE=0.01
+export SORBED_YOLO_SEG_KEEP_LARGEST=false
+export SORBED_TISSUE_BACKEND=cnn
+export SORBED_TISSUE_CNN_WEIGHTS=runs/tissue_cnn_final/seed0.pt
+```
+
 ## Clinical directive grounding
 
 Sorbed can ground a report in an institution's own pressure-injury directive. A

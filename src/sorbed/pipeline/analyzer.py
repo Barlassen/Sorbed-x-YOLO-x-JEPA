@@ -101,7 +101,8 @@ class WoundAnalyzer:
             skin_tone = estimate_skin_tone(analysis_pixels, seg.wound_mask)
 
         with _Timer(timings, "tissue"):
-            tissue = self._tissue.classify(analysis_pixels, seg.wound_mask)
+            # A learned tissue model sees the raw image too, for the same reason.
+            tissue = self._tissue.classify(analysis_pixels, seg.wound_mask, raw_rgb=image.pixels)
 
         with _Timer(timings, "morphometrics"):
             metrics = self._build_metrics(analysis_pixels, seg.wound_mask, tissue, calibration,
@@ -128,7 +129,10 @@ class WoundAnalyzer:
                 segmentation_backend=self._segmenter.name,
                 tissue_backend=self._tissue.name,
                 staging_backend=self._staging.name,
-                weights_sha256=_weights(seg.weights_sha256, self._segmenter.name),
+                weights_sha256={
+                    **_weights(seg.weights_sha256, self._segmenter.name),
+                    **_weights(getattr(self._tissue, "weights_sha256", None), self._tissue.name),
+                },
             ),
             stage_timings_ms={k: round(v, 2) for k, v in timings.items()},
             config_digest=self._settings.digest(),

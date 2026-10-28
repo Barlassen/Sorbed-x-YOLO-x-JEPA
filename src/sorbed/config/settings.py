@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="SORBED_", frozen=True, extra="forbid")
 
     # Backends. "classical" needs no weights and always works offline;
-    # "hf_sam"/"onnx" select learned backends (see docs/MODELS.md).
+    # "hf_sam"/"onnx"/"yolo" and tissue "cnn" select learned backends (see docs/MODELS.md).
     segmentation_backend: str = "classical"
     tissue_backend: str = "color_model"
     staging_backend: str = "rule_engine"
@@ -31,6 +31,17 @@ class Settings(BaseSettings):
 
     # HuggingFace segmentation model id (used when segmentation_backend="hf_sam").
     hf_model_id: str = "facebook/sam-vit-base"
+
+    # YOLO wound segmentation (segmentation_backend="yolo"). The fallback model runs
+    # only when the main one finds no wound ("old-first"). The pressure-injury
+    # configuration validated in HANDOFF (staging step 2) is listed in the README.
+    yolo_seg_model: str = "yolo26n-seg.pt"
+    yolo_seg_fallback_model: str = ""
+    yolo_seg_confidence: float = Field(default=0.25, gt=0, le=1)
+    yolo_seg_keep_largest: bool = True
+
+    # Tissue CNN weights (tissue_backend="cnn"; trained by training/train_tissue_cnn.py).
+    tissue_cnn_weights: str = ""
 
     # Segmentation controls.
     min_wound_area_fraction: float = Field(default=0.0015, ge=0, le=1)
