@@ -19,12 +19,16 @@ from sorbed.domain.decision import Evidence
 from sorbed.domain.enums import EvidenceDirection, PressureInjuryStage
 from sorbed.staging.features import FeatureVector
 
-# Default thresholds (see docs/CLINICAL.md).
-OBSCURED_UNSTAGEABLE = 0.5
+# Default thresholds (see docs/CLINICAL.md). The obscured / devitalized / granulation values were tuned on the
+# petchs pressure-injury stage labels (source-grouped 3-fold CV, CNN tissue map, old-first mask; was 0.5 / 0.1 /
+# 0.15). The tuning also chose ERYTHEMA_MIN = 0, but that set has no uninjured skin to argue against it, so it
+# stays at the safer 0.15.
+OBSCURED_UNSTAGEABLE = 0.3
 ERYTHEMA_MIN = 0.15
 MAROON_MIN = 0.15
 DEPTH_STAGE3 = 0.35
-DEVITALIZED_MAX_STAGE2 = 0.1
+DEVITALIZED_MAX_STAGE2 = 0.05
+GRANULATION_STAGE3 = 0.3
 SEG_CONF_MIN = 0.2
 MIN_WOUND_FRACTION = 0.001
 
@@ -46,6 +50,7 @@ class Thresholds:
     maroon_min: float = MAROON_MIN
     depth_stage3: float = DEPTH_STAGE3
     devitalized_max_stage2: float = DEVITALIZED_MAX_STAGE2
+    granulation_stage3: float = GRANULATION_STAGE3
     seg_conf_min: float = SEG_CONF_MIN
     min_wound_fraction: float = MIN_WOUND_FRACTION
 
@@ -165,16 +170,17 @@ def _dti_ev(f: FeatureVector, t: Thresholds) -> list[Evidence]:
 # --- Stage 3 ----------------------------------------------------------------
 # Clinically, granulation tissue forms in full-thickness healing, so an open bed
 # with visible fat OR granulation (base still visible, no exposed deep structure)
-# is graded Stage 3. A depth cue strengthens but is not required.
-_GRANULATION_STAGE3 = 0.15
-
-
+# is graded Stage 3. Slough/eschar that does not obscure the base also means
+# full-thickness loss (NPIAP: Stage 3 may show it, Stage 2 never does); without
+# this an open bed with some slough and little granulation matched no rule.
+# A depth cue strengthens but is not required.
 def _stage3_pred(f: FeatureVector, t: Thresholds) -> bool:
     if f.skin_intact or f.has_deep_structure:
         return False
     if f.obscured_fraction >= t.obscured_unstageable:
         return False
-    return f.adipose > 0.0 or f.granulation >= _GRANULATION_STAGE3
+    return (f.adipose > 0.0 or f.granulation >= t.granulation_stage3
+            or f.obscured_fraction >= t.devitalized_max_stage2)
 
 
 def _stage3_ev(f: FeatureVector, t: Thresholds) -> list[Evidence]:
@@ -190,6 +196,19 @@ def _stage3_ev(f: FeatureVector, t: Thresholds) -> list[Evidence]:
                 "R_STAGE_3",
             )
         ]
+    if f.granulation < t.granulation_stage3:
+        return [
+            _ev(
+                "devitalized_base_visible",
+                f"{f.obscured_fraction * 100:.0f}% slough/eschar that does not hide the base indicates "
+                "full-thickness loss, consistent with Stage 3.",
+                "metrics.tissue.obscured_fraction",
+                round(f.obscured_fraction, 3),
+                t.devitalized_max_stage2,
+                ">=",
+                "R_STAGE_3",
+            )
+        ]
     return [
         _ev(
             "granulation_full_thickness",
@@ -197,7 +216,7 @@ def _stage3_ev(f: FeatureVector, t: Thresholds) -> list[Evidence]:
             "full-thickness healing) and a visible base is consistent with Stage 3.",
             "metrics.tissue.fractions.granulation",
             round(f.granulation, 3),
-            _GRANULATION_STAGE3,
+            t.granulation_stage3,
             ">=",
             "R_STAGE_3",
         ),
@@ -223,7 +242,7 @@ def _stage2_pred(f: FeatureVector, t: Thresholds) -> bool:
     return (
         (not f.skin_intact)
         and f.epithelial > 0.05
-        and f.granulation < _GRANULATION_STAGE3
+        and f.granulation < t.granulation_stage3
         and f.obscured_fraction < t.devitalized_max_stage2
         and f.adipose == 0.0
         and not f.has_deep_structure

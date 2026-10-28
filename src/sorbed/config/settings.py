@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     grabcut_iterations: int = Field(default=5, ge=1, le=20)
 
     # Staging safety thresholds (see docs/CLINICAL.md).
-    obscured_fraction_unstageable: float = Field(default=0.5, ge=0, le=1)
+    obscured_fraction_unstageable: float = Field(default=0.3, ge=0, le=1)
     abstain_confidence_margin: float = Field(default=0.12, ge=0, le=1)
     low_confidence_threshold: float = Field(default=0.5, ge=0, le=1)
 

@@ -30,6 +30,12 @@ def test_granulation_is_stage_3():
     assert not d.abstained
 
 
+def test_visible_slough_without_granulation_is_stage_3():
+    # Some slough/eschar that does not hide the base, little granulation: full thickness, not a rule gap.
+    d = _decide(_fv(slough=0.2, obscured_fraction=0.2, granulation=0.05, epithelial=0.6, open_bed_fraction=0.3))
+    assert d.rule_stage is S.STAGE_3
+
+
 def test_obscured_bed_is_unstageable():
     d = _decide(_fv(eschar=0.6, slough=0.3, obscured_fraction=0.9, open_bed_fraction=0.9))
     assert d.stage is S.UNSTAGEABLE

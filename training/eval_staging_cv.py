@@ -15,6 +15,7 @@ import importlib.util
 import itertools
 import json
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -113,6 +114,7 @@ def old_engine_stages(rows: list[dict]) -> np.ndarray:
         path.write_text(src)
         spec = importlib.util.spec_from_file_location("rules_step1", path)
         old = importlib.util.module_from_spec(spec)
+        sys.modules["rules_step1"] = old  # dataclasses look their module up while the file executes
         spec.loader.exec_module(old)
     out = []
     for r in rows:

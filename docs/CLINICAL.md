@@ -125,6 +125,7 @@ IF skin BROKEN and full-thickness:
    IF base OBSCURED by slough/eschar → Unstageable
    ELIF fascia/muscle/tendon/ligament/cartilage/bone visible or palpable → Stage 4
    ELIF adipose (fat) visible → Stage 3
+   ELIF granulation, OR slough/eschar that does not obscure the base → Stage 3
 ```
 
 The ordering is significant. Mucosal and device checks come first because they change how everything downstream is interpreted. Within intact skin, DTPI is tested before Stage 1 so that maroon and purple discoloration is not misfiled as ordinary erythema. Within broken skin, the obscured-bed check precedes the depth checks because a depth that cannot be seen cannot be asserted.

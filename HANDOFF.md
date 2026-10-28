@@ -61,6 +61,32 @@ tam/kısmi kat, karışıklık matrisi, %95 GA; A−B ve A−düzeltilmemiş far
 **Karar kuralı:** A'nın eşikleri (tüm OOF'ta ayarlanmış hali) + boşluk düzeltmesi ürüne girer ⇔ A'nın birincil
 ölçüsü düzeltilmemiş motordan yüksek VE fark GA'sı 0'ı içermiyor. B ürüne girmez (gerekçe veremez); B−A farkı
 "kuralların neyi kaçırdığını" raporlar. Sınırlama: tek etiketleyici; 3 vs 4 fotoğraftan tanım gereği sınırlı.
+**SONUÇ** (`python -m training.eval_staging_cv` → `runs/staging/step2.json`; n=166 kaynak, 1:13 2:23 3:77 4:36 U:17;
+kural kopyası gerçek motorla her görüntüde eşleşti — assert). 4-sınıf dengeli doğruluk [%95 GA] (birincil) · 5-sınıf
+doğruluk · tam/kısmi kat · evresiz:
+| | 4-sınıf dengeli | 5-sınıf doğr. | tam/kısmi | evresiz |
+|---|---|---|---|---|
+| hep "Evre 3" | 0.25 | 0.46 | 0.78 | 0 |
+| adım-1 motoru (düzeltilmemiş) × old-first | 0.29 [0.22,0.35] | 0.35 | 0.69 | 0.17 |
+| A0 boşluk düzeltmesi, varsayılan eşik | 0.29 | 0.36 | 0.70 | 0.16 |
+| **A** düzeltilmiş + ayarlı eşik × old-first | **0.41** [0.32,0.50] | 0.36 | 0.74 | 0.08 |
+| A eşikleri × R1 GT bölge (ayrıştırma) | 0.45 [0.36,0.53] | 0.28 | 0.83 | 0.01 |
+| Sorbed GBM başlığı (ikincil) | 0.31 | 0.40 | 0.74 | 0 |
+| **B-coco** doğrudan evre CNN'i | **0.49** [0.38,0.59] | **0.55** | 0.75 | 0 |
+| B-tissue | 0.47 [0.37,0.56] | 0.54 | 0.79 | 0 |
+**Karar:** A − adım-1 = +0.126 [0.041, 0.222] → ölçüt tuttu → boşluk düzeltmesi + eşikler ürüne girdi: U eşiği
+0.5→0.3, granülasyon (Evre 3) 0.15→0.3, slough+eskar Evre 2/3 sınırı 0.1→0.05 (katlarda eşikler kararlı:
+u 0.3 her katta, g 0.2–0.3, d 0.05–0.1). **Ön-kayıttan sapma (güvenlik):** ayar eritem eşiğini 0'a indirdi (kapalı
+deri = Evre 1); petchs'te hasarsız deri yok → bu veriyle savunulamaz, ürün 0.15'te tuttu (eritem 0.15 sabitken iç içe
+CV'de A = 0.336). B − A = +0.073 [−0.04, 0.19] (B-tissue +0.055 [−0.04, 0.16]) → anlamlı fark YOK.
+Ayrıştırma: maske maliyeti küçük (GT bölge 0.45 vs old-first 0.41). A0 = adım-1 → boşluk düzeltmesi CNN dokusuyla
+tek başına etkisiz (renk modelinde 42/62 belirsizin kaynağıydı); kazanç eşiklerden.
+Hata yapısı: A Evre 4'ü veremez (36'nın 24'ü →3, 11'i →U), Evre 3'ün 24/77'sini U yapıyor, Evre 2'nin 11/23'ünü 3.
+B Evre 4'ün 22/36'sını doğru buluyor (kurallar 0) ama U'da zayıf (6/17; A 12/17) → tamamlayıcılar.
+**Ürün uyarısı:** ürün hattı hâlâ `segmentation_backend=classical` + `tissue_backend=color_model`; eşikler CNN dokusu +
+old-first maskeyle ayarlandı. Ürünün evre vermesi için CNN doku arka ucu + YOLO old-first ürüne bağlanmalı (sonraki iş).
+Testler: pytest/hypothesis .venv'de yok (kurulmadı); test_staging 11/11, test_report_pdf 3, test_feedback 2 doğrudan
+çalıştırıldı, uçtan uca analyze_image çalışıyor.
 
 ## ÖN-KAYIT — evreleme adım 1: mevcut Sorbed motorunun ölçümü (2026-10-28, model çıktısı görülmeden)
 **Soru:** `src/sorbed/staging` kural motoru (varsayılan eşikler, HİÇ değiştirilmeden) bası fotoğraflarında evreyi
