@@ -25,6 +25,43 @@ yama × 192 boyut, 6 katman, 5 kanal). Dizüstü ölçeğinde rastgele başlang�
 **Git:** `claude/sorbed-details-heuk41`. Staj raporları (`STAJ_RAPORU_*.md/.docx`) bilerek git dışında
 (`.git/info/exclude`); `.claude/settings.json` kişisel, commit edilmez.
 
+## ⚠️ petchs SIZINTISI (2026-10-28) — Roboflow kopyaları bölümler arası
+petchs'te Roboflow, artırılmış kopyaları (çevirme, döndürme, kırpma, renk) BÖLMEDEN ÖNCE üretmiş: dosya adındaki
+kaynak numarası (`20009_jpg.rf.<hash>`) aynı fotoğrafı gösteriyor (`runs/audit/petchs_split_leak.png`). 310 görüntü
+= 166 kaynak; train∩test 17, train∩valid 17, valid∩test 6 kaynak. dHash (döndürme/kırpma görmez) yalnız 2'sini
+yakalamıştı. Etkilenen sonuçlar: (a) CNN-P/PS'nin petchs-test doku skorları (0.91–0.93; zaten "şişik" denmişti),
+(b) maske v4'te YOLO-v4/DeepLab-v4'ün petchs-test skoru (petchs train'le eğitildiler) — ama kaynağı eğitimde
+OLMAYAN 11 görüntüde de: eski 0.514, v1 0.533, YOLO-v4 0.733, **DeepLab-v4 0.783** → ilerleme gerçek (bu 11 daha
+kolay; sızıntılı 15'te sırasıyla 0.22/0.41/0.48/0.58). Üretim kararı (CWDB) etkilenmez. Evreleme adım 1 (eğitimsiz
+kurallar) sonucu değişmez (sızıntı yalnız iyimser yönde). Bundan sonra petchs = `training/petchs_groups.py`
+(kaynağa göre katlar).
+
+## ÖN-KAYIT — evreleme adım 2: A (düzeltilmiş kurallar) ve B (doğrudan evre CNN'i) (2026-10-28, sonuçtan önce)
+**Veri ve katlar:** petchs 310 görüntü / 166 kaynak, kaynağa göre 3 kat (evreye göre tabakalı; `petchs_groups`).
+Bir kaynağın tüm kopyaları aynı katta. Her kat için yalnız diğer iki katla eğitim/ayar; o kat tahmin edilir (OOF).
+**Değerlendirme birimi:** kaynak başına 1 görüntü (alfabetik ilk) → n=166 (1:13, 2:23, 3:77, 4:36, U:17); bootstrap
+kaynak üzerinden. Önceki petchs valid/test ayrımı kullanılmaz.
+**Doku (A için):** CNN-PS tarifi her kat için yeniden eğitilir (`--petchs-holdout-fold k`: petchs'in o kattaki
+kaynakları tamamen dışarıda, iç doğrulama = kalan petchs kaynaklarının her 6.'sı + eski DFUT/LUTSeg iç val). Bir
+görüntünün doku haritası, onu görmemiş kat modelinden gelir.
+**Maske (A için):** old-first (üretim; petchs görmedi → sızıntısız). DeepLab-v4 petchs train gördüğü için kullanılmaz.
+**A — düzeltilmiş kural motoru:** ürün kodunda (1) kural boşluğu kapatılır: açık yara + taban örtülü değil
+(slough+eskar < U eşiği) + slough+eskar ≥ `devitalized_max_stage2` → Evre 3 (NPIAP: Evre 3'te slough/eskar görünebilir;
+Evre 2'de olmaz); (2) granülasyon eşiği `Thresholds`'a taşınır. Ayarlanan 5 eşik: U eşiği, granülasyon (Evre 3),
+slough+eskar (Evre 2/3 sınırı), "deri sağlam" açık-yatak eşiği, eritem (Evre 1). Izgara araması diğer iki katın OOF
+özelliklerinde, amaç 4-sınıf dengeli doğruluk {1, 2, 3/4, U} (kurallar 4'ü veremez); eşitlikte varsayılana en yakın.
+Ek (ikincil): Sorbed'in GBM başlığı aynı özelliklerle (iç içe CV). Ayrıca karşılaştırma: düzeltilmemiş motor (adım
+1 kuralları) aynı OOF özelliklerle; A'nın R1 (GT bölge) hali ayrıştırma için.
+**B — doğrudan evre CNN'i:** tüm fotoğraf (maske yok), MobileNetV3 (DeepLab COCO omurgası; ikinci başlangıç: o katın
+doku-CNN omurgası), 5 sınıf, ağırlıklı CE, AdamW 3e-4 kosinüs 30 epoch, artırma (kırpma 0.5–1, çevirme, rot90,
+parlaklık; renk tonu yok), epoch seçimi eğitim katlarının kaynak-ayrık iç doğrulamasında (her 6. kaynak) dengeli
+doğrulukla; seed 0.
+**Ölçüler:** 5-sınıf doğruluk ve dengeli doğruluk, **4-sınıf dengeli doğruluk (birincil; 3 ve 4 birleşik)**,
+tam/kısmi kat, karışıklık matrisi, %95 GA; A−B ve A−düzeltilmemiş farkı için eşli bootstrap. Taban: hep "Evre 3".
+**Karar kuralı:** A'nın eşikleri (tüm OOF'ta ayarlanmış hali) + boşluk düzeltmesi ürüne girer ⇔ A'nın birincil
+ölçüsü düzeltilmemiş motordan yüksek VE fark GA'sı 0'ı içermiyor. B ürüne girmez (gerekçe veremez); B−A farkı
+"kuralların neyi kaçırdığını" raporlar. Sınırlama: tek etiketleyici; 3 vs 4 fotoğraftan tanım gereği sınırlı.
+
 ## ÖN-KAYIT — evreleme adım 1: mevcut Sorbed motorunun ölçümü (2026-10-28, model çıktısı görülmeden)
 **Soru:** `src/sorbed/staging` kural motoru (varsayılan eşikler, HİÇ değiştirilmeden) bası fotoğraflarında evreyi
 ne kadar doğru veriyor; hata bölgeden (maske) mi, dokudan mı, kurallardan mı geliyor?

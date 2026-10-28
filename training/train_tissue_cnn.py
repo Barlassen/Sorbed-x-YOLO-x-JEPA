@@ -165,8 +165,13 @@ def petchs_test_dups(threshold: int = 6) -> set[str]:
     return out
 
 
-def samples(multi: bool = False, figshare: bool = False, petchs: bool = False, segulcer: bool = False):
-    """(name, crop, target, is_internal_val). DFUT: every 6th TrainVal image is internal val."""
+def samples(multi: bool = False, figshare: bool = False, petchs: bool = False, segulcer: bool = False,
+            petchs_holdout: int | None = None):
+    """(name, crop, target, is_internal_val). DFUT: every 6th TrainVal image is internal val.
+
+    petchs_holdout=k: use all petchs splits except the sources in source-fold k (see petchs_groups); every 6th
+    remaining source is internal val.
+    """
     n_cls = 4 if multi else 3
     out = []
     for i, (name, img, gt) in enumerate(dfut_items("TrainVal")):
@@ -214,7 +219,17 @@ def samples(multi: bool = False, figshare: bool = False, petchs: bool = False, s
             crop, creg, (g,), _ = crop_resize(img, reg, lab)
             out.append((f"{tag}/{name}", crop, _target(g, creg, n_cls), is_val))
 
-    if petchs:
+    if petchs and petchs_holdout is not None:
+        from training.petchs_groups import SPLITS, source, source_folds
+
+        folds = source_folds()
+        keep = sorted(s for s, k in folds.items() if k != petchs_holdout)
+        val_src = set(keep[5::6])
+        for sp in SPLITS:
+            for name, img, lab in coco_items(RF_PETCHS, sp):
+                if folds[source(name)] != petchs_holdout:
+                    add("petchs", [(name, img, lab)], source(name) in val_src)
+    elif petchs:
         dups = petchs_test_dups()
         add("petchs", coco_items(RF_PETCHS, "train", dups), False)
         add("petchs", coco_items(RF_PETCHS, "valid", dups), True)
@@ -265,11 +280,12 @@ def main() -> None:
     ap.add_argument("--figshare", action="store_true", help="also add the 20 Figshare pressure-ulcer polygons")
     ap.add_argument("--petchs", action="store_true", help="add Roboflow petchs pressure-ulcer train (+valid as val)")
     ap.add_argument("--segulcer", action="store_true", help="add Roboflow Segmentation-ulcer (coarse, 1 tissue/img)")
+    ap.add_argument("--petchs-holdout-fold", type=int, help="with --petchs: all splits, minus this source fold")
     args = ap.parse_args()
     torch.manual_seed(args.seed)
     rng = np.random.default_rng(args.seed)
 
-    items = samples(args.multi, args.figshare, args.petchs, args.segulcer)
+    items = samples(args.multi, args.figshare, args.petchs, args.segulcer, args.petchs_holdout_fold)
     val = [x for x in items if x[3]]
     train = [x for x in items if not x[3]]
     n_cls = 4 if args.multi else 3
