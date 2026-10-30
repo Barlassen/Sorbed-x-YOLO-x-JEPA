@@ -1,7 +1,12 @@
 # Devir Teslim — Sorbed × YOLO × JEPA
 
 > Yeni bir sohbette / oturumda kaldığımız yerden devam etmek için özet.
-> Son güncelleme: 2026-10-29.
+> Son güncelleme: 2026-10-30.
+
+**2026-10-30 son durum (ayrıntı: "ÖN-KAYIT — katmanlı yara haritası" bölümü):** Kaynak-katlı DeepLab 166 bası
+kaynağında açık yüzeyi old-first'ün iki katı iyi buluyor: Dice 0.28 → 0.60, ıskalama %40 → %5, fark GA 0.27–0.36.
+Ama CWDB koruma eşiği tutmadığı için ürün maskesi ön-kayıt gereği old-first kaldı. Bu maskeyle evrede belirsiz
+141 → 18'e indi ama doğruluk artmadı (0.33). Darboğaz artık kural eşikleri: Evre 3'ün çoğu U'ya gidiyor.
 
 ## 🧭 BURADAN DEVAM (2026-10-29) — kısa durum
 
@@ -96,8 +101,33 @@ yapmak anlamlı iyileşme. A − old-first = −0.038 [−0.075, −0.002]. Koru
 kuralına göre ürün maskesi bu turda değişmez, M1 ne çıkarsa çıksın. Gerçek taşmalar düzeldi: #3 0.33 → 0.79,
 #18 0.69 → 0.84. Kullanıcının örneği #9 0.38 → 0.60; D'nin %71'i pembe katman. En büyük kayıp #26 (0.94 → 0.84): CNN
 eskarın bir kısmını "O" dedi. Görseller `runs/audit/layered/` (hasta fotoğrafı, yerel).
-DeepLab kat eğitimleri 2026-10-30 17:54'te başladı (sırayla, epoch başına ~4–5 dk → ~5.5 sa); log
-`logs/wound_deeplab_fold{k}.log`. Bitince: `python -m training.eval_layered_map --petchs` (M1 + M3).
+**Kat eğitimleri** (2026-10-30 17:54 → 23:20; log `logs/wound_deeplab_fold{k}.log`): iç doğrulama Dice kat 0 0.786
+(epoch 7), kat 1 0.769 (9), kat 2 0.714 (4); sızıntı eşleşmesi 0.
+**SONUÇ M1 (birincil; `python -m training.eval_layered_map --petchs` → `runs/layered/m1_m3_petchs.json`):** doku
+poligonu olan 131 kaynak (35 dokusuz hariç: 18 Evre 2, 13 Evre 1). Açık yüzey Dice ortalama old-first **0.277**, D
+**0.595**, A **0.590** (medyan 0.22 → 0.64). Iskalama (Dice < 0.1): old-first %40.5 → D %4.6. A − old-first = **+0.31
+[0.267, 0.361]**; D − old-first [0.271, 0.366]; A − D [−0.013, 0.001] (petchs açık yüzey GT'sinde pembe kenar az, E
+neredeyse boş). Her katta tutarlı (D / old-first: 0.565 / 0.326, 0.631 / 0.269, 0.591 / 0.239); 131'in 115'inde D
+daha iyi. Etikete göre D / old-first: Evre 2 (n = 5) 0.58 / 0.41, Evre 3 (74) 0.49 / 0.20, Evre 4 (36) 0.79 / 0.44,
+U (16) 0.66 / 0.22. **Yorum sınırı:** kat modelleri başka kaynaklardaki aynı etiketleyicinin aynı "açık yüzey"
+tanımıyla eğitildi, old-first hiç bası fotoğrafı görmedi (FUSeg / CO2 / DFUT, diyabetik ayak). Fark "bası
+fotoğrafıyla eğitilmiş olmak + etiket tanımı eşleşmesi"; kaynak sızıntısı değil (katlar + dHash).
+**KARAR:** M1 ✔, M2 ✘ (A 0.827 < 0.835) → ön-kayıtlı kurala göre **ürün maskesi old-first kalır.** Kural sonuçtan
+sonra değiştirilmez; DeepLab'e geçiş yeni bir ön-kayıt ister (ör. M2'deki kaybın kaynağı: #26'da eskarın "O" sayılması).
+**SONUÇ M3 (evre, 166; karar vermez):**
+- Kapısız 4-sınıf dengeli doğruluk: D 0.327, old-first 0.349 → maske 2 kat iyileşti, evre iyileşmedi.
+- Kapılı: belirsiz 141 → **18**. Gösterilen: 61 Evre 3, 86 U, 1 Evre 2. Gösterilenlerde dengeli doğruluk 0.342
+  (old-first 25 gösterilen, 0.404). Belirsiz = yanlış sayılınca 0.053 → 0.327.
+- 17 boş maske (8 Evre 1, 6 Evre 2): açık yüzey yok, D doğru biçimde boş.
+- Seg güveni ↔ D Dice Spearman 0.58 → güven anlamlı.
+- **Darboğaz kural ağacına kaydı:**
+  - Evre 3'ün 50/77'si U'ya gidiyor. U kuralı "yatağın ≥ %30'u slough/eskar"; bu eşik old-first maskesiyle
+    ayarlanmıştı. Tam maske daha çok sarı/siyah doku kapsıyor.
+  - Evre 2 hiç verilmiyor (0/23; 13'ü Evre 3).
+  - Evre 1 için dış "kapalı deri" katmanı (v2) gerekiyor.
+- Bu adımda eşik ayarı YOK (ön-kayıt).
+**Sıradaki (öneri):** (1) eşikleri D maskesiyle kaynak-katlı CV'de yeniden ayarlamayı ön-kayıtla (adım-2 tarifiyle
+aynı); (2) M2 açığını kapatacak maske ön-kaydı; (3) v2 dış katman için uzman/hemşire etiketi.
 
 ## 🔌 ÜRÜNE BAĞLAMA (2026-10-28) — YOLO old-first maske + CNN doku arka ucu
 
