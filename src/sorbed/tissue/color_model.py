@@ -131,8 +131,11 @@ class ColorTissueClassifier:
         composition = self._build_composition(counts, conf_sum, total)
 
         erythema = int((granulation & (L > 55) & (a < 35)).sum())
-        open_bed = (counts[TissueClass.GRANULATION] + counts[TissueClass.SLOUGH]
-                    + counts[TissueClass.ESCHAR]) / total
+        open_bed = (
+            counts[TissueClass.GRANULATION]
+            + counts[TissueClass.SLOUGH]
+            + counts[TissueClass.ESCHAR]
+        ) / total
 
         return TissueAnalysis(
             label_map=label_map,

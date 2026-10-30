@@ -25,8 +25,17 @@ class ImageFormat(StrEnum):
 
 # HEIF brand codes that appear in the 'ftyp' box.
 _HEIF_BRANDS = {
-    b"heic", b"heix", b"hevc", b"hevx", b"mif1", b"msf1", b"heim",
-    b"heis", b"avif", b"avis", b"mif2",
+    b"heic",
+    b"heix",
+    b"hevc",
+    b"hevx",
+    b"mif1",
+    b"msf1",
+    b"heim",
+    b"heis",
+    b"avif",
+    b"avis",
+    b"mif2",
 }
 
 # libraw-recognized raw signatures (a pragmatic subset).

@@ -533,7 +533,7 @@ def _gray_world_uint8(image: np.ndarray, **_: Any) -> np.ndarray:
 
 def build_train_transform(cfg: AugmentationConfig) -> Any:
     """Return the training albumentations ``Compose`` (image + mask)."""
-    import albumentations as A  # noqa: N812 - conventional albumentations alias
+    import albumentations as A  # conventional albumentations alias
 
     steps: list[Any] = [
         A.Resize(cfg.input_size, cfg.input_size),
@@ -566,7 +566,7 @@ def build_val_transform(cfg: AugmentationConfig) -> Any:
     used at train time, and ImageNet standardization. Keeping normalization
     identical across train and inference is what makes the numbers comparable.
     """
-    import albumentations as A  # noqa: N812
+    import albumentations as A
 
     steps: list[Any] = [A.Resize(cfg.input_size, cfg.input_size)]
     if cfg.gray_world:

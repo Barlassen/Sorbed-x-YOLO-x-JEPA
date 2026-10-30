@@ -56,8 +56,7 @@ def _size_sentence(metrics: Metrics) -> str:
     geom = metrics.geometry
     if geom.area_cm2 is not None:
         return (
-            f"Wound area {geom.area_cm2:.1f} cm^2 "
-            f"({geom.length_mm:.0f} x {geom.width_mm:.0f} mm)."
+            f"Wound area {geom.area_cm2:.1f} cm^2 ({geom.length_mm:.0f} x {geom.width_mm:.0f} mm)."
         )
     return (
         f"Wound area {geom.area_px:.0f} px "

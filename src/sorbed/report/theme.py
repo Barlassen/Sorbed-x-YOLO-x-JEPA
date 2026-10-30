@@ -17,8 +17,16 @@ STAGE_THEME: dict[str, tuple[str, str, str]] = {
     PressureInjuryStage.STAGE_2.value: ("#E4711C", "#FCEEE2", "Evre 2 · Stage 2"),
     PressureInjuryStage.STAGE_3.value: ("#DB4A4F", "#FBE9EA", "Evre 3 · Stage 3"),
     PressureInjuryStage.STAGE_4.value: ("#B21E27", "#F7E2E3", "Evre 4 · Stage 4"),
-    PressureInjuryStage.DEEP_TISSUE.value: ("#7C3AED", "#F0EAFB", "Derin doku · Deep tissue injury"),
-    PressureInjuryStage.UNSTAGEABLE.value: ("#4B5563", "#EBEDF0", "Sınıflandırılamayan · Unstageable"),
+    PressureInjuryStage.DEEP_TISSUE.value: (
+        "#7C3AED",
+        "#F0EAFB",
+        "Derin doku · Deep tissue injury",
+    ),
+    PressureInjuryStage.UNSTAGEABLE.value: (
+        "#4B5563",
+        "#EBEDF0",
+        "Sınıflandırılamayan · Unstageable",
+    ),
     PressureInjuryStage.MUCOSAL.value: ("#0E9C9B", "#E3F5F5", "Mukozal · Mucosal"),
     PressureInjuryStage.NOT_PRESSURE_INJURY.value: ("#6B7280", "#EEF0F2", "Basınç yarası değil"),
     PressureInjuryStage.INDETERMINATE.value: ("#8A93A0", "#EEF0F3", "Belirsiz · Indeterminate"),
@@ -57,9 +65,9 @@ def base_css(accent: str, accent_soft: str) -> str:
   --line: #e7eaef;
   --paper: #ffffff;
   --panel: #f7f8fa;
-  --crit: {ALERT_COLORS['critical']};
-  --warn: {ALERT_COLORS['warning']};
-  --ok: {ALERT_COLORS['positive']};
+  --crit: {ALERT_COLORS["critical"]};
+  --warn: {ALERT_COLORS["warning"]};
+  --ok: {ALERT_COLORS["positive"]};
 }}
 * {{ box-sizing: border-box; }}
 @page {{ size: A4; margin: 14mm 13mm 16mm 13mm; }}

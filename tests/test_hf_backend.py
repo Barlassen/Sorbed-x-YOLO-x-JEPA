@@ -24,8 +24,9 @@ _HAS_TRANSFORMERS = importlib.util.find_spec("transformers") is not None
 
 def _raster(rgb: np.ndarray) -> RasterImage:
     meta = build_metadata(pixels=rgb, source_format="png", bit_depth=8, channels=3)
-    return RasterImage(pixels=rgb, metadata=meta, calibration=Calibration(
-        status=CalibrationStatus.UNCALIBRATED))
+    return RasterImage(
+        pixels=rgb, metadata=meta, calibration=Calibration(status=CalibrationStatus.UNCALIBRATED)
+    )
 
 
 def test_from_settings_uses_default_model():

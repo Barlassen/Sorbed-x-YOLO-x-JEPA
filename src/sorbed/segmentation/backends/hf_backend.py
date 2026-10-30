@@ -61,8 +61,7 @@ class HuggingFaceSAMSegmenter:
             from transformers import SamModel, SamProcessor
         except ImportError as exc:
             raise RuntimeError(
-                "The HuggingFace backend needs torch + transformers: "
-                "pip install 'sorbed[hf]'."
+                "The HuggingFace backend needs torch + transformers: pip install 'sorbed[hf]'."
             ) from exc
 
         try:

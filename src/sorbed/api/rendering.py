@@ -33,9 +33,7 @@ def rendered_panels(bundle: AnalysisBundle) -> dict[str, str]:
         ),
         "detection": _data_uri(render_detection(bundle.analysis, display)),
         "depth": _data_uri(render_depth_overlay(display, depth_field, bundle.wound_mask)),
-        "schematic": _data_uri(
-            render_schematic(bundle.tissue_label_map, bundle.wound_mask)
-        ),
+        "schematic": _data_uri(render_schematic(bundle.tissue_label_map, bundle.wound_mask)),
     }
 
 

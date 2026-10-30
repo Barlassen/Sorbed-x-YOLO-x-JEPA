@@ -109,9 +109,7 @@ class GBMStagingHead:
         x = feature_array(features).reshape(1, -1)
         proba = np.asarray(self._model.predict_proba(x))[0]  # type: ignore[attr-defined]
         model_classes = [PressureInjuryStage(c) for c in self._model.classes_]  # type: ignore[attr-defined]
-        probabilities = {
-            stage: float(p) for stage, p in zip(model_classes, proba, strict=True)
-        }
+        probabilities = {stage: float(p) for stage, p in zip(model_classes, proba, strict=True)}
         best = max(probabilities.items(), key=lambda kv: kv[1])[0]
         return MLStagePrediction(
             stage=best,

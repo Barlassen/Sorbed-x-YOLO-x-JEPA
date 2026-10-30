@@ -91,11 +91,18 @@ def test_store_join_resolves_by_role_then_recency(tmp_path) -> None:
     # A senior HQ correction supersedes an earlier front-line nurse review.
     store = FeedbackStore(tmp_path)
     store.append_inference(_inference("recA"))
-    store.append_feedback(_feedback("recA", created_at="2026-07-11T01:00:00+00:00",
-                                    reviewer_role="nurse", corrected_stage=None, agree=True))
+    store.append_feedback(
+        _feedback(
+            "recA",
+            created_at="2026-07-11T01:00:00+00:00",
+            reviewer_role="nurse",
+            corrected_stage=None,
+            agree=True,
+        )
+    )
     store.append_feedback(_feedback("recA", created_at="2026-07-11T02:00:00+00:00"))
 
-    (_, fb), = list(store.join_pairs())
+    ((_, fb),) = list(store.join_pairs())
     assert fb is not None
     assert fb.reviewer_role == "hq"
     assert fb.corrected_stage == "stage_4"
@@ -147,9 +154,7 @@ def test_export_human_label_overrides_model(tmp_path) -> None:
     store.append_inference(_inference("recB", stage="stage_2"))
 
     out = tmp_path / "manifest.csv"
-    result = runner.invoke(
-        feedback_app, ["export", "--root", str(store_root), "--out", str(out)]
-    )
+    result = runner.invoke(feedback_app, ["export", "--root", str(store_root), "--out", str(out)])
     assert result.exit_code == 0, result.output
 
     with open(out, encoding="utf-8") as handle:
@@ -169,13 +174,25 @@ def test_role_precedence_beats_recency(tmp_path) -> None:
     # A physician correction must not be overwritten by a LATER nurse review.
     store = FeedbackStore(tmp_path)
     store.append_inference(_inference("recA", stage="stage_3"))
-    store.append_feedback(_feedback("recA", created_at="2026-07-11T01:00:00+00:00",
-                                    reviewer_role="physician", corrected_stage="stage_4"))
-    store.append_feedback(_feedback("recA", created_at="2026-07-11T09:00:00+00:00",
-                                    reviewer_role="nurse", corrected_stage="stage_2"))
-    (_, fb), = list(store.join_pairs())
+    store.append_feedback(
+        _feedback(
+            "recA",
+            created_at="2026-07-11T01:00:00+00:00",
+            reviewer_role="physician",
+            corrected_stage="stage_4",
+        )
+    )
+    store.append_feedback(
+        _feedback(
+            "recA",
+            created_at="2026-07-11T09:00:00+00:00",
+            reviewer_role="nurse",
+            corrected_stage="stage_2",
+        )
+    )
+    ((_, fb),) = list(store.join_pairs())
     assert fb is not None
-    assert fb.reviewer_role == "physician"      # senior tier wins despite being older
+    assert fb.reviewer_role == "physician"  # senior tier wins despite being older
     assert fb.corrected_stage == "stage_4"
 
 
@@ -185,13 +202,14 @@ def test_agree_is_confirmed_not_human_weighted(tmp_path) -> None:
     store_root = tmp_path / "store"
     store = FeedbackStore(store_root)
     store.append_inference(_inference("recA", stage="stage_2"))
-    store.append_feedback(_feedback("recA", reviewer_role="physician",
-                                    agree=True, corrected_stage=None))
+    store.append_feedback(
+        _feedback("recA", reviewer_role="physician", agree=True, corrected_stage=None)
+    )
     out = tmp_path / "m.csv"
     result = runner.invoke(feedback_app, ["export", "--root", str(store_root), "--out", str(out)])
     assert result.exit_code == 0, result.output
     with open(out, encoding="utf-8") as handle:
         row = next(csv.DictReader(handle))
     assert row["source"] == "human_confirmed"
-    assert row["stage"] == "stage_2"            # still the model's own label
-    assert float(row["sample_weight"]) <= 1.0   # capped at the rule tier
+    assert row["stage"] == "stage_2"  # still the model's own label
+    assert float(row["sample_weight"]) <= 1.0  # capped at the rule tier

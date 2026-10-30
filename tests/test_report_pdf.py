@@ -20,11 +20,23 @@ from sorbed.trend.alerts import assess_healing
 from sorbed.trend.models import WoundTimePoint
 
 
-def _pt(day: float, area: float, stage: PressureInjuryStage, gran: float,
-        nec: float = 0.0, push: int | None = None) -> WoundTimePoint:
+def _pt(
+    day: float,
+    area: float,
+    stage: PressureInjuryStage,
+    gran: float,
+    nec: float = 0.0,
+    push: int | None = None,
+) -> WoundTimePoint:
     return WoundTimePoint(
-        label=f"visit {int(day)}", day=day, stage=stage, confidence=0.8,
-        area_px=area * 100, area_cm2=area, perimeter_px=200.0, perimeter_mm=40.0,
+        label=f"visit {int(day)}",
+        day=day,
+        stage=stage,
+        confidence=0.8,
+        area_px=area * 100,
+        area_cm2=area,
+        perimeter_px=200.0,
+        perimeter_mm=40.0,
         tissue_fractions={TissueClass.GRANULATION: gran, TissueClass.SLOUGH: nec},
         push_total=push,
     )
@@ -64,9 +76,11 @@ def test_followup_report_html_and_verdict() -> None:
     assert assessment.level == "positive"
     assert any(a.metric == "area" for a in assessment.alerts)
     html = build_followup_report_html(
-        trend=trend, assessment=assessment,
+        trend=trend,
+        assessment=assessment,
         guideline_ctx=build_guideline_context_stub(),
-        visit_thumbs={}, patient_ref="PID-9",
+        visit_thumbs={},
+        patient_ref="PID-9",
     )
     assert "PID-9" in html
     assert "Patient improving" in html

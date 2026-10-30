@@ -10,11 +10,24 @@ from sorbed.staging.features import FeatureVector
 
 def _fv(**over) -> FeatureVector:
     base = {
-        "skin_intact": False, "open_bed_fraction": 1.0, "obscured_fraction": 0.0,
-        "granulation": 0.0, "slough": 0.0, "eschar": 0.0, "epithelial": 0.0,
-        "adipose": 0.0, "muscle": 0.0, "tendon_bone": 0.0, "has_deep_structure": False,
-        "maroon_purple": 0.0, "erythema": 0.0, "depth_index": 0.2, "area_cm2": 5.0,
-        "is_calibrated": True, "seg_confidence": 0.8, "wound_fraction_of_image": 0.2,
+        "skin_intact": False,
+        "open_bed_fraction": 1.0,
+        "obscured_fraction": 0.0,
+        "granulation": 0.0,
+        "slough": 0.0,
+        "eschar": 0.0,
+        "epithelial": 0.0,
+        "adipose": 0.0,
+        "muscle": 0.0,
+        "tendon_bone": 0.0,
+        "has_deep_structure": False,
+        "maroon_purple": 0.0,
+        "erythema": 0.0,
+        "depth_index": 0.2,
+        "area_cm2": 5.0,
+        "is_calibrated": True,
+        "seg_confidence": 0.8,
+        "wound_fraction_of_image": 0.2,
     }
     base.update(over)
     return FeatureVector(**base)

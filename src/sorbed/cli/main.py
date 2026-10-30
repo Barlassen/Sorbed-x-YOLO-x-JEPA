@@ -57,8 +57,10 @@ def analyze(
         err_console.print(f"[red]No such file:[/red] {image}")
         raise typer.Exit(2)
 
-    artifacts = DEFAULT_ARTIFACTS if fmt.strip() == "all" else tuple(
-        p.strip() for p in fmt.split(",") if p.strip()
+    artifacts = (
+        DEFAULT_ARTIFACTS
+        if fmt.strip() == "all"
+        else tuple(p.strip() for p in fmt.split(",") if p.strip())
     )
     options = AnalyzeOptions(
         mm_per_px=mm_per_px, marker_length_mm=marker_mm, coin_diameter_mm=coin_mm
@@ -125,15 +127,19 @@ def compare(
     (out / "trend.json").write_text(trend.model_dump_json(indent=2), encoding="utf-8")
 
     console.print(f"\n[bold]Healing trend[/bold] — {trend.trajectory.upper()}")
-    console.print(f"Area reduction: {trend.percent_area_reduction:+.0f}% over "
-                  f"{day_values[-1] - day_values[0]:g} days")
+    console.print(
+        f"Area reduction: {trend.percent_area_reduction:+.0f}% over "
+        f"{day_values[-1] - day_values[0]:g} days"
+    )
     if trend.healing_rate_per_week is not None:
         console.print(f"Healing rate: {trend.healing_rate_per_week:+.2f} {trend.unit}/week")
     if trend.projected_days_to_closure is not None:
         console.print(f"Projected closure: ~{trend.projected_days_to_closure:.0f} days")
     if trend.likely_to_heal is not None:
-        console.print(f"4-week PAR: {trend.par_at_4_weeks:.0f}%  "
-                      f"({'on track to heal' if trend.likely_to_heal else 'below 40% threshold'})")
+        console.print(
+            f"4-week PAR: {trend.par_at_4_weeks:.0f}%  "
+            f"({'on track to heal' if trend.likely_to_heal else 'below 40% threshold'})"
+        )
     console.print(f"\n[green]Wrote trend dashboard + JSON to[/green] {out}/")
 
 
@@ -197,8 +203,9 @@ def formats() -> None:
 
 @app.command()
 def schema(
-    out: Annotated[Path | None, typer.Option("--out", help="Write schema here instead of stdout.")]
-    = None,
+    out: Annotated[
+        Path | None, typer.Option("--out", help="Write schema here instead of stdout.")
+    ] = None,
 ) -> None:
     """Print the JSON Schema of the analysis result contract."""
     doc = json.dumps(WoundAnalysis.model_json_schema(), indent=2)

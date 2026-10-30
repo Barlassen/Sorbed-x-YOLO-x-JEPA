@@ -15,21 +15,50 @@ _frac = st.floats(min_value=0.0, max_value=1.0, allow_nan=False, allow_infinity=
 
 
 @given(
-    granulation=_frac, slough=_frac, eschar=_frac, epithelial=_frac,
-    maroon=_frac, erythema=_frac, depth=_frac, seg=_frac, obscured=_frac,
-    intact=st.booleans(), structure=st.booleans(),
+    granulation=_frac,
+    slough=_frac,
+    eschar=_frac,
+    epithelial=_frac,
+    maroon=_frac,
+    erythema=_frac,
+    depth=_frac,
+    seg=_frac,
+    obscured=_frac,
+    intact=st.booleans(),
+    structure=st.booleans(),
 )
 @settings(max_examples=200, deadline=None)
 def test_engine_always_returns_valid_decision(
-    granulation, slough, eschar, epithelial, maroon, erythema, depth, seg, obscured,
-    intact, structure,
+    granulation,
+    slough,
+    eschar,
+    epithelial,
+    maroon,
+    erythema,
+    depth,
+    seg,
+    obscured,
+    intact,
+    structure,
 ):
     fv = FeatureVector(
-        skin_intact=intact, open_bed_fraction=min(1.0, granulation + slough + eschar),
-        obscured_fraction=obscured, granulation=granulation, slough=slough, eschar=eschar,
-        epithelial=epithelial, adipose=0.0, muscle=0.0, tendon_bone=0.0,
-        has_deep_structure=structure, maroon_purple=maroon, erythema=erythema,
-        depth_index=depth, area_cm2=5.0, is_calibrated=True, seg_confidence=seg,
+        skin_intact=intact,
+        open_bed_fraction=min(1.0, granulation + slough + eschar),
+        obscured_fraction=obscured,
+        granulation=granulation,
+        slough=slough,
+        eschar=eschar,
+        epithelial=epithelial,
+        adipose=0.0,
+        muscle=0.0,
+        tendon_bone=0.0,
+        has_deep_structure=structure,
+        maroon_purple=maroon,
+        erythema=erythema,
+        depth_index=depth,
+        area_cm2=5.0,
+        is_calibrated=True,
+        seg_confidence=seg,
         wound_fraction_of_image=0.2,
     )
     decision = StagingEngine().decide(fv, skin_tone=SkinToneBand.UNKNOWN, is_calibrated=True)
@@ -41,7 +70,9 @@ def test_engine_always_returns_valid_decision(
 
 
 @given(
-    r=st.floats(0.1, 0.9), g=st.floats(0.1, 0.9), b=st.floats(0.1, 0.9),
+    r=st.floats(0.1, 0.9),
+    g=st.floats(0.1, 0.9),
+    b=st.floats(0.1, 0.9),
 )
 @settings(max_examples=100, deadline=None)
 def test_tissue_fractions_sum_to_one_for_any_solid_color(r, g, b):

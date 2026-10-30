@@ -24,8 +24,7 @@ def test_superset_none_matches_plain_loss() -> None:
 
 def test_superset_penalises_background_on_foreground_pixels() -> None:
     n_classes, sentinel = 7, -2
-    loss = MulticlassDiceCELoss(num_classes=n_classes, superset_index=sentinel,
-                                background_index=0)
+    loss = MulticlassDiceCELoss(num_classes=n_classes, superset_index=sentinel, background_index=0)
     # All pixels are "foreground, class unknown" (the binary-wound-set case).
     target = torch.full((1, 8, 8), sentinel, dtype=torch.long)
 
@@ -72,8 +71,12 @@ def test_binary_source_maps_foreground_to_sentinel(tmp_path) -> None:
 
     image_path, mask_path = _write_pair(tmp_path, mask_values=255)
     dataset = SegmentationDataset(
-        [(image_path, mask_path)], input_size=16, num_classes=7,
-        superset_index=SUPERSET_SENTINEL, binary_flags=[True])
+        [(image_path, mask_path)],
+        input_size=16,
+        num_classes=7,
+        superset_index=SUPERSET_SENTINEL,
+        binary_flags=[True],
+    )
     _, target = dataset[0]
     # A binary source: foreground becomes the sentinel, background stays class 0.
     assert set(target.unique().tolist()) == {0, SUPERSET_SENTINEL}
@@ -84,8 +87,12 @@ def test_tissue_source_passes_class_indices_through(tmp_path) -> None:
 
     image_path, mask_path = _write_pair(tmp_path, mask_values=3)
     dataset = SegmentationDataset(
-        [(image_path, mask_path)], input_size=16, num_classes=7,
-        superset_index=SUPERSET_SENTINEL, binary_flags=[False])
+        [(image_path, mask_path)],
+        input_size=16,
+        num_classes=7,
+        superset_index=SUPERSET_SENTINEL,
+        binary_flags=[False],
+    )
     _, target = dataset[0]
     # A tissue source keeps its real class indices; no sentinel is introduced.
     assert set(target.unique().tolist()) == {0, 3}
@@ -96,5 +103,6 @@ def test_binary_flags_length_mismatch_raises(tmp_path) -> None:
 
     image_path, mask_path = _write_pair(tmp_path, mask_values=255)
     with pytest.raises(ValueError, match="binary_flags"):
-        SegmentationDataset([(image_path, mask_path)], input_size=16,
-                            num_classes=7, binary_flags=[True, False])
+        SegmentationDataset(
+            [(image_path, mask_path)], input_size=16, num_classes=7, binary_flags=[True, False]
+        )

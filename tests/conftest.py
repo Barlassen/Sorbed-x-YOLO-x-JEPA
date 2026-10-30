@@ -22,7 +22,5 @@ def granulating_wound() -> SynthWound:
 @pytest.fixture
 def granulating_analysis(granulating_wound: SynthWound):
     """The full analysis of the granulating wound, calibrated at 0.2 mm/px."""
-    bundle = analyze_image(
-        granulating_wound.to_png_bytes(), options=AnalyzeOptions(mm_per_px=0.2)
-    )
+    bundle = analyze_image(granulating_wound.to_png_bytes(), options=AnalyzeOptions(mm_per_px=0.2))
     return bundle.analysis

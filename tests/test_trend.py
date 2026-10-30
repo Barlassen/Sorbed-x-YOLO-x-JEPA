@@ -9,8 +9,9 @@ from sorbed.trend import compute_trend
 from sorbed.trend.models import WoundTimePoint
 
 
-def _pt(day: float, area_cm2: float | None, area_px: float, push: int | None = None,
-        gran: float = 0.8) -> WoundTimePoint:
+def _pt(
+    day: float, area_cm2: float | None, area_px: float, push: int | None = None, gran: float = 0.8
+) -> WoundTimePoint:
     return WoundTimePoint(
         label=f"Day {day:g}",
         day=day,

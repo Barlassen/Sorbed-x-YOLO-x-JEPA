@@ -30,8 +30,7 @@ def build_html(analysis: WoundAnalysis, guide_png: bytes | None = None) -> str:
     if guide_png is not None:
         b64 = base64.b64encode(guide_png).decode("ascii")
         guide_block = (
-            f'<img class="guide" alt="Annotated wound guide" '
-            f'src="data:image/png;base64,{b64}"/>'
+            f'<img class="guide" alt="Annotated wound guide" src="data:image/png;base64,{b64}"/>'
         )
 
     return _TEMPLATE.format(
@@ -72,11 +71,21 @@ def _metrics_table(a: WoundAnalysis) -> str:
     rows.append(_row("Skin tone band", a.skin_tone_band.value))
     hs = a.metrics.healing_scores
     if hs and hs.push_partial_total is not None:
-        rows.append(_row("PUSH (partial)", f"{hs.push_partial_total} (size {hs.push_size_subscore},"
-                                            f" tissue {hs.push_tissue_subscore})"))
+        rows.append(
+            _row(
+                "PUSH (partial)",
+                f"{hs.push_partial_total} (size {hs.push_size_subscore},"
+                f" tissue {hs.push_tissue_subscore})",
+            )
+        )
     if a.metrics.depth_proxy is not None:
-        rows.append(_row("Depth proxy", f"{a.metrics.depth_proxy.relative_depth_index:.2f} "
-                                        "(relative shading cue, not a measurement)"))
+        rows.append(
+            _row(
+                "Depth proxy",
+                f"{a.metrics.depth_proxy.relative_depth_index:.2f} "
+                "(relative shading cue, not a measurement)",
+            )
+        )
     return "".join(rows)
 
 

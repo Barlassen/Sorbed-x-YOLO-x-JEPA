@@ -36,9 +36,7 @@ def timepoint_from_analysis(analysis: WoundAnalysis, *, day: float, label: str) 
     )
 
 
-def compute_trend(
-    points: list[WoundTimePoint], *, patient_ref: str | None = None
-) -> HealingTrend:
+def compute_trend(points: list[WoundTimePoint], *, patient_ref: str | None = None) -> HealingTrend:
     """Assemble the healing trend and summary statistics from ordered visits."""
     if not points:
         raise ValueError("a healing trend needs at least one time point")
@@ -129,14 +127,21 @@ def _interval(a: WoundTimePoint, b: WoundTimePoint, calibrated: bool) -> Interva
         from_label=a.label,
         to_label=b.label,
         days_elapsed=days,
-        area_delta_cm2=(round(b.area_cm2 - a.area_cm2, 3) if calibrated and a.area_cm2 is not None
-                        and b.area_cm2 is not None else None),
+        area_delta_cm2=(
+            round(b.area_cm2 - a.area_cm2, 3)
+            if calibrated and a.area_cm2 is not None and b.area_cm2 is not None
+            else None
+        ),
         area_delta_px=round(b.area_px - a.area_px, 1),
         area_pct_change=round(pct, 2),
-        push_delta=(b.push_total - a.push_total if a.push_total is not None
-                    and b.push_total is not None else None),
-        granulation_delta=round(b.fraction(TissueClass.GRANULATION)
-                                - a.fraction(TissueClass.GRANULATION), 4),
+        push_delta=(
+            b.push_total - a.push_total
+            if a.push_total is not None and b.push_total is not None
+            else None
+        ),
+        granulation_delta=round(
+            b.fraction(TissueClass.GRANULATION) - a.fraction(TissueClass.GRANULATION), 4
+        ),
         slough_delta=round(b.fraction(TissueClass.SLOUGH) - a.fraction(TissueClass.SLOUGH), 4),
         eschar_delta=round(b.fraction(TissueClass.ESCHAR) - a.fraction(TissueClass.ESCHAR), 4),
         edge_advance_mm_per_day=edge,

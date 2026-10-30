@@ -45,9 +45,7 @@ class ConformalStageGate:
         """Smallest top-probability stage set whose mass reaches ``tau``."""
         row = np.asarray(probs, dtype=np.float64)
         if row.shape != (len(self.class_names),):
-            raise ValueError(
-                f"expected {len(self.class_names)} probabilities, got {row.shape}"
-            )
+            raise ValueError(f"expected {len(self.class_names)} probabilities, got {row.shape}")
         row = row / row.sum().clip(min=1e-12)
         order = np.argsort(-row)
         cumulative = np.cumsum(row[order])

@@ -119,9 +119,7 @@ _TISSUE_RYB: dict[TissueClass, tuple[str, str]] = {
 def _block(pack: DirectivePack, key: str, *, with_figure: bool = False) -> TopicBlock:
     topic = pack.topic(key)
     text = pack.topic_text(key)
-    citations = tuple(
-        Citation(section=s, page=p) for s, p in pack.citation(key)
-    )
+    citations = tuple(Citation(section=s, page=p) for s, p in pack.citation(key))
     figure = None
     if with_figure and topic and topic.figure:
         fig_path = pack.figure_path(key)

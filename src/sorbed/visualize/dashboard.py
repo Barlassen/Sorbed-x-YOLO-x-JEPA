@@ -115,8 +115,12 @@ def _header(draw: ImageDraw.ImageDraw, analysis: WoundAnalysis, width: int) -> N
     draw.rounded_rectangle([mx0, my, mx1, my + 8], radius=4, fill=_TILE)
     if conf > 0:
         draw.rounded_rectangle([mx0, my, mx0 + int(mw * conf), my + 8], radius=4, fill=color)
-    draw.text((mx0 - 8 - _tw(draw, label, font(11, "Medium")), my - 3), label,
-              font=font(11, "Medium"), fill=_MUTED)
+    draw.text(
+        (mx0 - 8 - _tw(draw, label, font(11, "Medium")), my - 3),
+        label,
+        font=font(11, "Medium"),
+        fill=_MUTED,
+    )
 
     draw.line([(_MARGIN, _HEADER), (width - _MARGIN, _HEADER)], fill=_HAIR, width=1)
 
@@ -145,8 +149,13 @@ def _fit(img: Image.Image, box: int) -> Image.Image:
 
 
 def _panel(
-    canvas: Image.Image, draw: ImageDraw.ImageDraw, img: Image.Image, label: str, icon: str,
-    x: int, y: int,
+    canvas: Image.Image,
+    draw: ImageDraw.ImageDraw,
+    img: Image.Image,
+    label: str,
+    icon: str,
+    x: int,
+    y: int,
 ) -> None:
     canvas.paste(_fit(img, _PANEL), (x, y))
     draw.rectangle([x, y, x + _PANEL - 1, y + _PANEL - 1], outline=_HAIR, width=1)
@@ -223,13 +232,15 @@ def _tone_label(analysis: WoundAnalysis) -> str:
     }.get(analysis.skin_tone_band.value, "unknown")
 
 
-def _rows(
-    draw: ImageDraw.ImageDraw, rows: list[tuple[str, str]], x: int, y: int, w: int
-) -> None:
+def _rows(draw: ImageDraw.ImageDraw, rows: list[tuple[str, str]], x: int, y: int, w: int) -> None:
     for label, value in rows:
         draw.text((x, y), label, font=font(12), fill=_MUTED)
-        draw.text((x + w - _tw(draw, value, font(12, "SemiBold")), y), value,
-                  font=font(12, "SemiBold"), fill=_INK)
+        draw.text(
+            (x + w - _tw(draw, value, font(12, "SemiBold")), y),
+            value,
+            font=font(12, "SemiBold"),
+            fill=_INK,
+        )
         y += 22
 
 
@@ -255,8 +266,12 @@ def _tissue_strip(
         draw.ellipse([x, yy + 2, x + 10, yy + 12], fill=tissue_color(c))
         draw.text((x + 18, yy), c.value.replace("_", " ").title(), font=font(12), fill=_INK)
         pct = f"{f * 100:.0f}%"
-        draw.text((x + w - _tw(draw, pct, font(12, "SemiBold")), yy), pct,
-                  font=font(12, "SemiBold"), fill=_MUTED)
+        draw.text(
+            (x + w - _tw(draw, pct, font(12, "SemiBold")), yy),
+            pct,
+            font=font(12, "SemiBold"),
+            fill=_MUTED,
+        )
         yy += 19
 
 

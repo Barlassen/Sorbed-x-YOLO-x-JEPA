@@ -52,13 +52,9 @@ def load_pack(pack_dir: str | Path) -> DirectivePack:
     raw_topics = _read_json(root / "topics.json")
 
     sections = {
-        sid: DirectiveSection.model_validate(payload)
-        for sid, payload in raw_sections.items()
+        sid: DirectiveSection.model_validate(payload) for sid, payload in raw_sections.items()
     }
-    topics = {
-        key: TopicGuidance.model_validate(payload)
-        for key, payload in raw_topics.items()
-    }
+    topics = {key: TopicGuidance.model_validate(payload) for key, payload in raw_topics.items()}
     return DirectivePack(meta=meta, sections=sections, topics=topics, root=root)
 
 

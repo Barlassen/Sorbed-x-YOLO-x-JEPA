@@ -86,6 +86,4 @@ class DirectivePack(BaseModel):
         topic = self.topics.get(key)
         if not topic:
             return []
-        return [
-            (s, self.sections[s].page) for s in topic.sections if s in self.sections
-        ]
+        return [(s, self.sections[s].page) for s in topic.sections if s in self.sections]

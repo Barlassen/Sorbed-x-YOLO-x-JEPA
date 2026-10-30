@@ -95,8 +95,12 @@ def test_evaluate_external_with_conformal(tmp_path) -> None:
     probs = exp / exp.sum(axis=1, keepdims=True)
     labels = np.array([rng.choice(len(CLASSES), p=probs[i]) for i in range(500)])
     calib = ConformalCalibrator.fit(
-        probs, labels, alpha=0.1, class_names=CLASSES,
-        defer_classes=["stage_3", "stage_4", "unstageable"])
+        probs,
+        labels,
+        alpha=0.1,
+        class_names=CLASSES,
+        defer_classes=["stage_3", "stage_4", "unstageable"],
+    )
     cpath = calib.to_json(tmp_path / "conformal.json")
     report = evaluate_external(csv_path, classes=CLASSES, calibrator_path=cpath, n_boot=100)
     assert "conformal" in report

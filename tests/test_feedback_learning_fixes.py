@@ -19,8 +19,12 @@ from training.continual import (
 def _row(source: str, grader_sha: str = "abc123", tmp=None) -> ContinualRow:
     return ContinualRow(
         image=(tmp / "img.png") if tmp else __import__("pathlib").Path("img.png"),
-        mask=None, stage_index=2, patient_id="p1", sample_weight=1.0,
-        source=source, grader_sha=grader_sha,
+        mask=None,
+        stage_index=2,
+        patient_id="p1",
+        sample_weight=1.0,
+        source=source,
+        grader_sha=grader_sha,
     )
 
 
@@ -71,8 +75,11 @@ from training.fl_client import (  # noqa: E402
 
 def _update(base_sha: str, round_id: int, scale: float) -> ClientUpdate:
     return ClientUpdate(
-        round_id=round_id, base_sha=base_sha,
-        tensors={"w": torch.ones(4) * scale}, num_samples=10, adapter_mode="delta",
+        round_id=round_id,
+        base_sha=base_sha,
+        tensors={"w": torch.ones(4) * scale},
+        num_samples=10,
+        adapter_mode="delta",
     )
 
 
@@ -105,5 +112,6 @@ def test_clip_delta_norm_bounds_influence() -> None:
     assert delta_l2_norm(clipped) == pytest.approx(5.0, abs=1e-4)
     # A one-off outlier client cannot dominate a small cohort after clipping.
     agg = aggregate_client_updates(
-        [_update("s", 1, 1.0), _update("s", 1, 100.0)], max_delta_norm=5.0)
+        [_update("s", 1, 1.0), _update("s", 1, 100.0)], max_delta_norm=5.0
+    )
     assert delta_l2_norm({"w": agg["w"]}) <= 5.0 + 1e-4

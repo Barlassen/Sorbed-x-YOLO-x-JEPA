@@ -48,7 +48,13 @@ _RULE_WEIGHT = 1.0
 _OVERRIDE_BOOST = 1.3
 
 _MANIFEST_COLUMNS = [
-    "image", "mask", "stage", "patient_id", "sample_weight", "source", "grader_sha"
+    "image",
+    "mask",
+    "stage",
+    "patient_id",
+    "sample_weight",
+    "source",
+    "grader_sha",
 ]
 
 
@@ -97,9 +103,7 @@ def record(
 @feedback_app.command()
 def submit(
     record_id: Annotated[str, typer.Option("--record-id", help="Inference record_id to review.")],
-    role: Annotated[
-        str, typer.Option("--role", help="Reviewer role: nurse | hq | physician.")
-    ],
+    role: Annotated[str, typer.Option("--role", help="Reviewer role: nurse | hq | physician.")],
     reviewer: Annotated[
         str, typer.Option("--reviewer", help="Pseudonymous reviewer id (never a name).")
     ],

@@ -80,8 +80,9 @@ def line_chart(
         last_series = series[0][1]
         last_val = next((v for v in reversed(last_series) if v is not None), None)
         if last_val is not None:
-            _dashed(d, (px(x[-1]), py(last_val)), (px(projection[0]), py(projection[1])),
-                    projection[2])
+            _dashed(
+                d, (px(x[-1]), py(last_val)), (px(projection[0]), py(projection[1])), projection[2]
+            )
     return img
 
 
@@ -132,8 +133,14 @@ def _dashed(
         if i % 2:
             continue
         t0, t1 = i / (steps + 1), min(1.0, (i + 1) / (steps + 1))
-        d.line([(ax + (bx - ax) * t0, ay + (by - ay) * t0),
-                (ax + (bx - ax) * t1, ay + (by - ay) * t1)], fill=c, width=2)
+        d.line(
+            [
+                (ax + (bx - ax) * t0, ay + (by - ay) * t0),
+                (ax + (bx - ax) * t1, ay + (by - ay) * t1),
+            ],
+            fill=c,
+            width=2,
+        )
 
 
 def _tw(d: ImageDraw.ImageDraw, text: str, size: int) -> int:

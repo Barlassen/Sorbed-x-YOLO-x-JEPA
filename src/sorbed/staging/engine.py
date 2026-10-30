@@ -51,8 +51,13 @@ class StagingEngine:
         fired = [f for f in firings if f.fired]
 
         if not fired:
-            return self._indeterminate(features, firings, skin_tone, is_calibrated,
-                                       reason="No clinical rule matched the observed features.")
+            return self._indeterminate(
+                features,
+                firings,
+                skin_tone,
+                is_calibrated,
+                reason="No clinical rule matched the observed features.",
+            )
 
         winner = max(fired, key=lambda f: f.priority)
         stage = winner.implied_stage or PressureInjuryStage.INDETERMINATE
@@ -179,9 +184,7 @@ class StagingEngine:
             )
         return caveats
 
-    def _maybe_abstain(
-        self, stage: PressureInjuryStage, confidence: float
-    ) -> tuple[float, bool]:
+    def _maybe_abstain(self, stage: PressureInjuryStage, confidence: float) -> tuple[float, bool]:
         if stage is PressureInjuryStage.INDETERMINATE:
             return confidence, True
         # Unstageable and Stage 4 are direct visual findings (obscured base /

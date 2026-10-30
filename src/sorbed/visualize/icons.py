@@ -23,9 +23,15 @@ def _image(draw: ImageDraw.ImageDraw, x: int, y: int, s: int, c: Color, w: int) 
     draw.rounded_rectangle([x, y, x + s, y + s], radius=max(2, s // 6), outline=c, width=w)
     draw.ellipse([x + s * 0.18, y + s * 0.18, x + s * 0.36, y + s * 0.36], outline=c, width=w)
     draw.line(
-        [(x + s * 0.15, y + s * 0.82), (x + s * 0.45, y + s * 0.5),
-         (x + s * 0.65, y + s * 0.68), (x + s * 0.85, y + s * 0.42)],
-        fill=c, width=w, joint="curve",
+        [
+            (x + s * 0.15, y + s * 0.82),
+            (x + s * 0.45, y + s * 0.5),
+            (x + s * 0.65, y + s * 0.68),
+            (x + s * 0.85, y + s * 0.42),
+        ],
+        fill=c,
+        width=w,
+        joint="curve",
     )
 
 
@@ -39,9 +45,16 @@ def _layers(draw: ImageDraw.ImageDraw, x: int, y: int, s: int, c: Color, w: int)
     for dy in (0.16, 0.4, 0.64):
         top = y + s * dy
         draw.line(
-            [(cx, top), (x + s * 0.86, top + s * 0.12), (cx, top + s * 0.24),
-             (x + s * 0.14, top + s * 0.12), (cx, top)],
-            fill=c, width=w, joint="curve",
+            [
+                (cx, top),
+                (x + s * 0.86, top + s * 0.12),
+                (cx, top + s * 0.24),
+                (x + s * 0.14, top + s * 0.12),
+                (cx, top),
+            ],
+            fill=c,
+            width=w,
+            joint="curve",
         )
 
 
@@ -64,8 +77,10 @@ def _target(draw: ImageDraw.ImageDraw, x: int, y: int, s: int, c: Color, w: int)
 
 def _ruler(draw: ImageDraw.ImageDraw, x: int, y: int, s: int, c: Color, w: int) -> None:
     draw.rounded_rectangle(
-        [x + s * 0.08, y + s * 0.3, x + s * 0.92, y + s * 0.7], radius=max(2, s // 10),
-        outline=c, width=w,
+        [x + s * 0.08, y + s * 0.3, x + s * 0.92, y + s * 0.7],
+        radius=max(2, s // 10),
+        outline=c,
+        width=w,
     )
     for i, dx in enumerate((0.25, 0.4, 0.55, 0.7, 0.85)):
         h = 0.62 if i % 2 else 0.5
@@ -80,17 +95,25 @@ def _gauge(draw: ImageDraw.ImageDraw, x: int, y: int, s: int, c: Color, w: int) 
 
 def _droplet(draw: ImageDraw.ImageDraw, x: int, y: int, s: int, c: Color, w: int) -> None:
     cx = x + s / 2
-    draw.polygon([(cx, y + s * 0.14), (x + s * 0.78, y + s * 0.58), (x + s * 0.22, y + s * 0.58)],
-                 fill=c)
+    draw.polygon(
+        [(cx, y + s * 0.14), (x + s * 0.78, y + s * 0.58), (x + s * 0.22, y + s * 0.58)], fill=c
+    )
     draw.ellipse([x + s * 0.22, y + s * 0.42, x + s * 0.78, y + s * 0.9], fill=c)
 
 
 def _spark(draw: ImageDraw.ImageDraw, x: int, y: int, s: int, c: Color, w: int) -> None:
     cx, cy = x + s / 2, y + s / 2
     draw.polygon(
-        [(cx, y + s * 0.1), (cx + s * 0.12, cy - s * 0.12), (x + s * 0.9, cy),
-         (cx + s * 0.12, cy + s * 0.12), (cx, y + s * 0.9), (cx - s * 0.12, cy + s * 0.12),
-         (x + s * 0.1, cy), (cx - s * 0.12, cy - s * 0.12)],
+        [
+            (cx, y + s * 0.1),
+            (cx + s * 0.12, cy - s * 0.12),
+            (x + s * 0.9, cy),
+            (cx + s * 0.12, cy + s * 0.12),
+            (cx, y + s * 0.9),
+            (cx - s * 0.12, cy + s * 0.12),
+            (x + s * 0.1, cy),
+            (cx - s * 0.12, cy - s * 0.12),
+        ],
         fill=c,
     )
 

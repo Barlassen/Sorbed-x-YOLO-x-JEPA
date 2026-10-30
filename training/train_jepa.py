@@ -169,7 +169,7 @@ class MaskGuidedJEPA(nn.Module):
     @torch.no_grad()
     def update_target(self) -> None:
         m = self.cfg.ema_momentum
-        for online, target in zip(self.encoder.parameters(), self.target_encoder.parameters()):
+        for online, target in zip(self.encoder.parameters(), self.target_encoder.parameters(), strict=True):
             target.mul_(m).add_(online.detach(), alpha=1 - m)
 
     def forward(self, images: torch.Tensor, ctx_idx: torch.Tensor, tgt_idx: torch.Tensor) -> torch.Tensor:

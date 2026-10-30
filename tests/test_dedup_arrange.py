@@ -65,9 +65,9 @@ def test_deduplicate_keeps_priority_source(tmp_path) -> None:
     ]
     kept, report = deduplicate(records, hamming_radius=6, source_priority=["azh", "wsnet"])
     kept_paths = {r.image_path for r in kept}
-    assert str(p3) in kept_paths          # the unique image survives
-    assert str(p1) in kept_paths          # azh preferred over wsnet duplicate
-    assert str(p2) not in kept_paths      # the duplicate is dropped
+    assert str(p3) in kept_paths  # the unique image survives
+    assert str(p1) in kept_paths  # azh preferred over wsnet duplicate
+    assert str(p2) not in kept_paths  # the duplicate is dropped
     assert report["dropped"] == 1
 
 
@@ -86,8 +86,7 @@ def test_arrange_remaps_grayscale_to_unified(tmp_path) -> None:
 
     mapping = tmp_path / "map.yaml"
     mapping.write_text(
-        "mode: grayscale\nunmapped: error\nmap:\n  0: background\n"
-        "  1: granulation\n  4: eschar\n",
+        "mode: grayscale\nunmapped: error\nmap:\n  0: background\n  1: granulation\n  4: eschar\n",
         encoding="utf-8",
     )
     out = tmp_path / "out"

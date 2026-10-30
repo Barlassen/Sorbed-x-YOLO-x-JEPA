@@ -123,12 +123,14 @@ def _action_banner(d: StageDecision) -> str:
     if not d.requires_clinician_review:
         return ""
     if d.abstained:
-        reason = ("Model kesin bir evre vermedi. · The model withheld a definite grade.")
+        reason = "Model kesin bir evre vermedi. · The model withheld a definite grade."
     elif d.stage.is_depth_dependent:
-        reason = ("Bu evre doku derinliğine bağlıdır ve 2B fotoğraf bunu doğrulayamaz. · This grade is "
-                  "depth-dependent and a 2D photo cannot confirm it.")
+        reason = (
+            "Bu evre doku derinliğine bağlıdır ve 2B fotoğraf bunu doğrulayamaz. · This grade is "
+            "depth-dependent and a 2D photo cannot confirm it."
+        )
     else:
-        reason = ("Düşük güven. · Low confidence.")
+        reason = "Düşük güven. · Low confidence."
     return (
         "<div class='actbanner'><span class='actdot'></span>"
         "<div><b>Klinisyen doğrulaması gerekli · Clinician confirmation required.</b> "
@@ -158,8 +160,7 @@ def _metric(k: str, v: str, u: str = "") -> str:
 def _tissue_bar(fractions: Mapping[TissueClass, float]) -> str:
     # Include intact peri-wound skin so the bar accounts for the whole frame and
     # the "other" component is visible, not a silent gap. Background is excluded.
-    items = [(tc, f) for tc, f in fractions.items()
-             if f > 0.004 and tc != TissueClass.BACKGROUND]
+    items = [(tc, f) for tc, f in fractions.items() if f > 0.004 and tc != TissueClass.BACKGROUND]
     items.sort(key=lambda kv: kv[1], reverse=True)
     total = sum(f for _, f in items) or 1.0
     segs, legend = [], []
@@ -172,8 +173,9 @@ def _tissue_bar(fractions: Mapping[TissueClass, float]) -> str:
         )
     if not segs:
         return "<p class='muted small'>Doku bileşimi belirlenemedi.</p>"
-    return (f"<div class='tissuebar'>{''.join(segs)}</div>"
-            f"<div class='legend'>{''.join(legend)}</div>")
+    return (
+        f"<div class='tissuebar'>{''.join(segs)}</div><div class='legend'>{''.join(legend)}</div>"
+    )
 
 
 def _cite_line(block: TopicBlock | None) -> str:
@@ -212,20 +214,22 @@ def _card(title: str, inner: str, *, cls: str = "", sub: str = "") -> str:
 # international equivalent, not a translation of the source document.
 _STAGE_EN: dict[str, str] = {
     "stage_1": "Stage 1 — intact skin with non-blanchable erythema; may be preceded by "
-               "colour change, warmth, oedema, or firmness. Harder to detect in dark skin.",
+    "colour change, warmth, oedema, or firmness. Harder to detect in dark skin.",
     "stage_2": "Stage 2 — partial-thickness skin loss exposing dermis; a shallow open ulcer or "
-               "intact/ruptured blister. No slough, granulation, or deeper tissue.",
+    "intact/ruptured blister. No slough, granulation, or deeper tissue.",
     "stage_3": "Stage 3 — full-thickness skin loss; subcutaneous fat may be visible, with possible "
-               "slough, undermining, and tunnelling. Depth varies by anatomical site.",
+    "slough, undermining, and tunnelling. Depth varies by anatomical site.",
     "stage_4": "Stage 4 — full-thickness skin and tissue loss with exposed or palpable fascia, "
-               "muscle, tendon, or bone; often with slough/eschar, undermining, and tunnelling.",
+    "muscle, tendon, or bone; often with slough/eschar, undermining, and tunnelling.",
     "unstageable": "Unstageable — full-thickness loss where the wound bed is obscured by slough "
-                   "and/or eschar; the true depth cannot be determined until it is debrided.",
+    "and/or eschar; the true depth cannot be determined until it is debrided.",
     "deep_tissue_injury": "Deep tissue pressure injury — intact or non-intact skin with persistent "
-                          "non-blanchable deep-red, maroon, or purple discolouration.",
+    "non-blanchable deep-red, maroon, or purple discolouration.",
 }
-_RYB_EN = ("Red-Yellow-Black tissue model: red = granulation/epithelial healing tissue (desirable); "
-           "yellow = fibrinous slough, a sign of infection to treat; black = necrotic tissue to debride.")
+_RYB_EN = (
+    "Red-Yellow-Black tissue model: red = granulation/epithelial healing tissue (desirable); "
+    "yellow = fibrinous slough, a sign of infection to treat; black = necrotic tissue to debride."
+)
 
 
 def _stage_likelihood(analysis: WoundAnalysis) -> str:
@@ -254,26 +258,33 @@ def _viability_bar(s: GradingStats) -> str:
         segs.append(f"<span style='width:{nv / total * 100:.1f}%;background:#B4232A'></span>")
     if not segs:
         segs.append("<span style='width:100%;background:#e9ecf1'></span>")
-    return (f"<div class='tissuebar'>{''.join(segs)}</div>"
-            f"<div class='vsplit'><span class='good'>● Canlı · Viable "
-            f"<b class='mono'>~{v:.0f}%</b></span>"
-            f"<span class='bad'>● Cansız · Non-viable "
-            f"<b class='mono'>~{nv:.0f}%</b></span></div>")
+    return (
+        f"<div class='tissuebar'>{''.join(segs)}</div>"
+        f"<div class='vsplit'><span class='good'>● Canlı · Viable "
+        f"<b class='mono'>~{v:.0f}%</b></span>"
+        f"<span class='bad'>● Cansız · Non-viable "
+        f"<b class='mono'>~{nv:.0f}%</b></span></div>"
+    )
 
 
 def _clinical_stats_card(analysis: WoundAnalysis) -> str:
     s = grading_stats(analysis)
-    ratio = ("Slough saptanmadı · not detected — oran anlamlı değil"
-             if s.granulation_slough_ratio is None else f"~{_fmt(s.granulation_slough_ratio, 1)}")
-    tiles = "".join([
-        f"<div class='metric'><div class='k'>Standart ölçü · Size</div>"
-        f"<div class='v mono' style='font-size:12px'>{escape(s.standard_size)}</div></div>",
-        f"<div class='metric'><div class='k'>Yara yatağı · Wound bed</div>"
-        f"<div class='v' style='color:{s.bed_descriptor_color};font-size:11px;line-height:1.25'>"
-        f"{escape(s.bed_descriptor)}</div></div>",
-        f"<div class='metric'><div class='k'>Gran./Slough oranı · ratio</div>"
-        f"<div class='v mono' style='font-size:11px'>{ratio}</div></div>",
-    ])
+    ratio = (
+        "Slough saptanmadı · not detected — oran anlamlı değil"
+        if s.granulation_slough_ratio is None
+        else f"~{_fmt(s.granulation_slough_ratio, 1)}"
+    )
+    tiles = "".join(
+        [
+            f"<div class='metric'><div class='k'>Standart ölçü · Size</div>"
+            f"<div class='v mono' style='font-size:12px'>{escape(s.standard_size)}</div></div>",
+            f"<div class='metric'><div class='k'>Yara yatağı · Wound bed</div>"
+            f"<div class='v' style='color:{s.bed_descriptor_color};font-size:11px;line-height:1.25'>"
+            f"{escape(s.bed_descriptor)}</div></div>",
+            f"<div class='metric'><div class='k'>Gran./Slough oranı · ratio</div>"
+            f"<div class='v mono' style='font-size:11px'>{ratio}</div></div>",
+        ]
+    )
     rows = "".join(
         f"<div class='fi'><span>{escape(_tlabel(t.tissue))}</span>"
         f"<span><b class='mono'>~{t.fraction * 100:.0f}%</b>"
@@ -294,11 +305,15 @@ def _clinical_stats_card(analysis: WoundAnalysis) -> str:
     # Necrotic burden — graded, only when present. No reassuring "no red flags".
     nec = ""
     if s.necrotic_level == "high":
-        nec = ("<span class='pill' style='border-color:#F0B4B4;background:#FCEBEB;color:#9B2222'>"
-               f"⚑ Yüksek nekrotik yük · High necrotic burden · {escape(s.necrotic_detail)}</span>")
+        nec = (
+            "<span class='pill' style='border-color:#F0B4B4;background:#FCEBEB;color:#9B2222'>"
+            f"⚑ Yüksek nekrotik yük · High necrotic burden · {escape(s.necrotic_detail)}</span>"
+        )
     elif s.necrotic_level == "caution":
-        nec = ("<span class='pill' style='border-color:#F4D9A8;background:#FCF3E3;color:#8A5A12'>"
-               f"⚑ Nekrotik doku mevcut · Necrotic tissue present · {escape(s.necrotic_detail)}</span>")
+        nec = (
+            "<span class='pill' style='border-color:#F4D9A8;background:#FCF3E3;color:#8A5A12'>"
+            f"⚑ Nekrotik doku mevcut · Necrotic tissue present · {escape(s.necrotic_detail)}</span>"
+        )
     not_ruleout = (
         "<div class='mininote' style='margin-top:8px'>Otomatik uyarı olmaması güvenli demek değildir — "
         "enfeksiyon, alttan oyulma, daha derin doku tutulumu veya osteomiyeliti dışlamaz. · Absence of "
@@ -308,9 +323,11 @@ def _clinical_stats_card(analysis: WoundAnalysis) -> str:
         "yatak başında sonda ile kontrol edin. · Undermining/tunnelling and depth cannot be judged from a "
         "photo — probe the edges at the bedside.</div>"
     )
-    denom = ("<div class='mininote'>Yüzdeler açık yara yatağına göredir (sağlam çevre deri hariç; "
-             f"çevre/margin ~{s.intact_skin_pct:.0f}%). · Percentages are of the open wound bed "
-             "(excludes intact peri-wound skin).</div>")
+    denom = (
+        "<div class='mininote'>Yüzdeler açık yara yatağına göredir (sağlam çevre deri hariç; "
+        f"çevre/margin ~{s.intact_skin_pct:.0f}%). · Percentages are of the open wound bed "
+        "(excludes intact peri-wound skin).</div>"
+    )
     return _card(
         "Klinik istatistikler · Clinical statistics",
         "<div class='estnote'>Model tahminleri, ölçüm değildir · Model estimates, not measurements</div>"
@@ -320,7 +337,8 @@ def _clinical_stats_card(analysis: WoundAnalysis) -> str:
         f"<div class='grid3 tight' style='margin-top:11px'>{tiles}</div>"
         f"<div class='findlist' style='margin-top:6px'>{rows}</div>"
         + (f"<div style='margin-top:9px'>{nec}</div>" if nec else "")
-        + not_ruleout + denom,
+        + not_ruleout
+        + denom,
         cls="avoidbreak",
         sub="TIME · wound-bed preparation",
     )
@@ -336,8 +354,12 @@ def _guideline_compare_card(
     en = _STAGE_EN.get(analysis.decision.stage.value, "")
     src = (
         "<div class='srcbox'><span class='ribbon src'>◆ Kaynak doküman · Source guideline</span>"
-        + (f"<figure class='cmpfig'><img src='{fig}'>"
-           f"<figcaption>{escape(block.caption or '')}</figcaption></figure>" if fig else "")
+        + (
+            f"<figure class='cmpfig'><img src='{fig}'>"
+            f"<figcaption>{escape(block.caption or '')}</figcaption></figure>"
+            if fig
+            else ""
+        )
         + f"<div class='q' style='font-size:9px;margin-top:8px'>{escape(block.text[:520])}</div>"
         + _cite_line(block)
         + (f"<div class='enrow'><b>EN (NPIAP eşdeğeri):</b> {escape(en)}</div>" if en else "")
@@ -345,18 +367,24 @@ def _guideline_compare_card(
     )
     _, __, stage_label = stage_theme(analysis.decision.stage)
     s = grading_stats(analysis)
-    findings = "".join([
-        f"<div class='fi'><span>Evre · Stage</span><b>{escape(stage_label)}</b></div>",
-        f"<div class='fi'><span>Güven · Confidence</span><b class='mono'>{round(analysis.decision.confidence*100)}%</b></div>",
-        f"<div class='fi'><span>Ölçü · Size</span><b class='mono'>{escape(s.standard_size)}</b></div>",
-        f"<div class='fi'><span>Canlı doku · Viable</span><b class='mono'>{s.viability.viable_pct:.0f}%</b></div>",
-        f"<div class='fi'><span>Baskın doku · Dominant</span><b>{escape(_tlabel(analysis.metrics.tissue.dominant))}</b></div>",
-    ])
+    findings = "".join(
+        [
+            f"<div class='fi'><span>Evre · Stage</span><b>{escape(stage_label)}</b></div>",
+            f"<div class='fi'><span>Güven · Confidence</span><b class='mono'>{round(analysis.decision.confidence * 100)}%</b></div>",
+            f"<div class='fi'><span>Ölçü · Size</span><b class='mono'>{escape(s.standard_size)}</b></div>",
+            f"<div class='fi'><span>Canlı doku · Viable</span><b class='mono'>{s.viability.viable_pct:.0f}%</b></div>",
+            f"<div class='fi'><span>Baskın doku · Dominant</span><b>{escape(_tlabel(analysis.metrics.tissue.dominant))}</b></div>",
+        ]
+    )
     schem = images.get("schematic")
     gen = (
         "<div class='genbox'><span class='ribbon gen'>◆ Sorbed · Üretilen · Generated</span>"
-        + (f"<figure class='cmpfig'><img src='{schem}'>"
-           "<figcaption>Model şeması · Generated schematic</figcaption></figure>" if schem else "")
+        + (
+            f"<figure class='cmpfig'><img src='{schem}'>"
+            "<figcaption>Model şeması · Generated schematic</figcaption></figure>"
+            if schem
+            else ""
+        )
         + f"<div class='findlist' style='margin-top:8px'>{findings}</div>"
         + "</div>"
     )
@@ -370,19 +398,27 @@ def _guideline_compare_card(
 
 
 def _generated_visuals_card(images: Mapping[str, str]) -> str:
-    pairs = [("mask", "İkili maske · Binary mask"),
-             ("schematic", "Şema · Synthetic schematic"),
-             ("overlay", "Doku overlay · Tissue overlay"),
-             ("detection", "Tespit · Detection"),
-             ("depth", "Göreli derinlik · Relative depth")]
-    figs = [f"<figure><img src='{images[k]}'><figcaption>{escape(lab)}</figcaption></figure>"
-            for k, lab in pairs if k in images]
+    pairs = [
+        ("mask", "İkili maske · Binary mask"),
+        ("schematic", "Şema · Synthetic schematic"),
+        ("overlay", "Doku overlay · Tissue overlay"),
+        ("detection", "Tespit · Detection"),
+        ("depth", "Göreli derinlik · Relative depth"),
+    ]
+    figs = [
+        f"<figure><img src='{images[k]}'><figcaption>{escape(lab)}</figcaption></figure>"
+        for k, lab in pairs
+        if k in images
+    ]
     if not figs and "dashboard" not in images:
         return ""
     thumbs = f"<div class='thumbrow'>{''.join(figs)}</div>" if figs else ""
-    dash = (f"<figure class='dashfig'><img src='{images['dashboard']}'>"
-            "<figcaption>Analiz paneli · Analysis dashboard</figcaption></figure>"
-            if "dashboard" in images else "")
+    dash = (
+        f"<figure class='dashfig'><img src='{images['dashboard']}'>"
+        "<figcaption>Analiz paneli · Analysis dashboard</figcaption></figure>"
+        if "dashboard" in images
+        else ""
+    )
     return _card(
         "Üretilen analiz görselleri · Generated analysis outputs",
         thumbs + dash,
@@ -409,16 +445,20 @@ def build_grading_report_html(
     css = base_css(accent, soft)
 
     sub = escape((d.narrative or "").split(". ")[0][:150]) if d.narrative else ""
-    tone = analysis.skin_tone_band.value.replace("_", " ").title() if analysis.skin_tone_band else "—"
+    tone = (
+        analysis.skin_tone_band.value.replace("_", " ").title() if analysis.skin_tone_band else "—"
+    )
     calib = "kalibre · cm²" if g.area_cm2 is not None else "kalibresiz · px"
-    pills = "".join([
-        _pill(f"Cilt tonu · Skin tone · {tone}"),
-        _pill(calib),
-        _pill(f"ID {str(analysis.analysis_id)[:8]}"),
-    ])
+    pills = "".join(
+        [
+            _pill(f"Cilt tonu · Skin tone · {tone}"),
+            _pill(calib),
+            _pill(f"ID {str(analysis.analysis_id)[:8]}"),
+        ]
+    )
     if patient_ref:
         pills = _pill(patient_ref) + pills
-    sub_html = (f"<div class='sub'><span class='eng'>Neden · Why: </span>{sub}</div>" if sub else "")
+    sub_html = f"<div class='sub'><span class='eng'>Neden · Why: </span>{sub}</div>" if sub else ""
     hero = (
         "<div class='hero'>"
         f"{_brandrow(guideline_ctx, 'pressure-injury analysis')}"
@@ -437,42 +477,56 @@ def build_grading_report_html(
     disclaimer = _disclaimer_line()
 
     # Left column: imagery. Photo large, model panels beneath.
-    photo = (f"<figure class='big'><img src='{images['photo']}'>"
-             "<figcaption>Yüklenen görüntü · Uploaded photo</figcaption></figure>"
-             if "photo" in images else "")
+    photo = (
+        f"<figure class='big'><img src='{images['photo']}'>"
+        "<figcaption>Yüklenen görüntü · Uploaded photo</figcaption></figure>"
+        if "photo" in images
+        else ""
+    )
     small = []
-    labels = {"overlay": "Doku · Tissue", "detection": "Tespit · Detection",
-              "depth": "Derinlik · Depth"}
+    labels = {
+        "overlay": "Doku · Tissue",
+        "detection": "Tespit · Detection",
+        "depth": "Derinlik · Depth",
+    }
     for key in ("overlay", "detection", "depth"):
         if key in images:
-            small.append(f"<figure><img src='{images[key]}'>"
-                         f"<figcaption>{escape(labels[key])}</figcaption></figure>")
-    left = (f"<div class='imgstack'>{photo}<div class='trio'>{''.join(small)}</div></div>")
+            small.append(
+                f"<figure><img src='{images[key]}'>"
+                f"<figcaption>{escape(labels[key])}</figcaption></figure>"
+            )
+    left = f"<div class='imgstack'>{photo}<div class='trio'>{''.join(small)}</div></div>"
 
     # Right column: measurements + stage likelihood.
     area_v = f"{g.area_cm2:.2f}" if g.area_cm2 is not None else f"{g.area_px:.0f}"
     area_u = "cm²" if g.area_cm2 is not None else "px"
-    lw = (f"{g.length_mm:.0f}×{g.width_mm:.0f}" if g.length_mm and g.width_mm
-          else f"{g.length_px:.0f}×{g.width_px:.0f}")
+    lw = (
+        f"{g.length_mm:.0f}×{g.width_mm:.0f}"
+        if g.length_mm and g.width_mm
+        else f"{g.length_px:.0f}×{g.width_px:.0f}"
+    )
     lw_u = "mm" if g.length_mm else "px"
     gran = _fmt(hs.granulation_percent if hs else None, 0)
     push = str(hs.push_partial_total) if hs and hs.push_partial_total is not None else "—"
-    metrics = "".join([
-        _metric("Yüzey alanı", area_v, area_u),
-        _metric("U×G", lw, lw_u),
-        _metric("Çevre", f"{g.perimeter_px:.0f}", "px"),
-        _metric("Granülasyon", gran, "%"),
-        _metric("PUSH", push, "/17"),
-        _metric("Baskın doku", escape(_tlabel(analysis.metrics.tissue.dominant))),
-    ])
+    metrics = "".join(
+        [
+            _metric("Yüzey alanı", area_v, area_u),
+            _metric("U×G", lw, lw_u),
+            _metric("Çevre", f"{g.perimeter_px:.0f}", "px"),
+            _metric("Granülasyon", gran, "%"),
+            _metric("PUSH", push, "/17"),
+            _metric("Baskın doku", escape(_tlabel(analysis.metrics.tissue.dominant))),
+        ]
+    )
     like = _stage_likelihood(analysis)
     if like:
         extra = f"<div class='mininote'>Evre olasılıkları · Stage likelihood</div>{like}"
     else:
         # No ML stage posterior available — fill the column with the tissue mix,
         # which is always informative and grounds the RYB card below.
-        extra = ("<div class='mininote'>Doku bileşimi · Tissue composition</div>"
-                 + _tissue_bar(analysis.metrics.tissue.fractions))
+        extra = "<div class='mininote'>Doku bileşimi · Tissue composition</div>" + _tissue_bar(
+            analysis.metrics.tissue.fractions
+        )
     right = f"<div class='grid2 tight'>{metrics}</div>{extra}"
 
     top_card = _card(
@@ -495,8 +549,9 @@ def build_grading_report_html(
             f"{_cite_line(guideline_ctx.tissue_model)}</div>"
             f"<div class='legend' style='margin-top:8px'>{readings}</div>"
         )
-        tissue_card = _card("Doku rengi modeli · Tissue-colour model (RYB · §4.5.9)",
-                            inner, cls="avoidbreak")
+        tissue_card = _card(
+            "Doku rengi modeli · Tissue-colour model (RYB · §4.5.9)", inner, cls="avoidbreak"
+        )
 
     stats_card = _clinical_stats_card(analysis)
     compare_card = _guideline_compare_card(analysis, guideline_ctx, images)
@@ -510,20 +565,35 @@ def build_grading_report_html(
             if guideline_ctx.reassessment_citation:
                 c = guideline_ctx.reassessment_citation
                 ref = f" <span class='muted'>(§{c.section}, s.{c.page})</span>"
-            bits.append(f"<p><b>Yeniden değerlendirme (açık yara):</b> "
-                        f"{escape(guideline_ctx.reassessment_open)}{ref}</p>")
+            bits.append(
+                f"<p><b>Yeniden değerlendirme (açık yara):</b> "
+                f"{escape(guideline_ctx.reassessment_open)}{ref}</p>"
+            )
         if guideline_ctx.care and guideline_ctx.care.text:
-            bits.append(f"<div class='cite' style='margin-top:6px'><div class='q'>"
-                        f"{escape(guideline_ctx.care.text[:820])}</div>{_cite_line(guideline_ctx.care)}</div>")
+            bits.append(
+                f"<div class='cite' style='margin-top:6px'><div class='q'>"
+                f"{escape(guideline_ctx.care.text[:820])}</div>{_cite_line(guideline_ctx.care)}</div>"
+            )
         if bits:
-            care_card = _card("Bakım ve yeniden değerlendirme · Care & reassessment",
-                              "".join(bits), cls="avoidbreak")
+            care_card = _card(
+                "Bakım ve yeniden değerlendirme · Care & reassessment",
+                "".join(bits),
+                cls="avoidbreak",
+            )
 
     # Order (per clinical-informatics review): validated guideline grounding
     # leads; derived indices follow under caveats; generated visuals last.
-    body = (hero + disclaimer + top_card + compare_card + stats_card
-            + tissue_card + care_card + visuals_card
-            + _footer(guideline_ctx, generated, provenance=_provenance(analysis), limitations=True))
+    body = (
+        hero
+        + disclaimer
+        + top_card
+        + compare_card
+        + stats_card
+        + tissue_card
+        + care_card
+        + visuals_card
+        + _footer(guideline_ctx, generated, provenance=_provenance(analysis), limitations=True)
+    )
     return _doc(css, body, "Sorbed · Basınç Yaralanması Değerlendirme")
 
 
@@ -546,13 +616,17 @@ def build_summary_report_html(
     css = base_css(accent, soft)
     s = grading_stats(analysis)
 
-    tone = analysis.skin_tone_band.value.replace("_", " ").title() if analysis.skin_tone_band else "—"
-    pills = "".join([
-        _pill(patient_ref) if patient_ref else "",
-        _pill(f"Cilt tonu · Skin tone · {tone}"),
-        _pill("kalibre · cm²" if g.area_cm2 is not None else "kalibresiz · px"),
-        _pill(f"ID {str(analysis.analysis_id)[:8]}"),
-    ])
+    tone = (
+        analysis.skin_tone_band.value.replace("_", " ").title() if analysis.skin_tone_band else "—"
+    )
+    pills = "".join(
+        [
+            _pill(patient_ref) if patient_ref else "",
+            _pill(f"Cilt tonu · Skin tone · {tone}"),
+            _pill("kalibre · cm²" if g.area_cm2 is not None else "kalibresiz · px"),
+            _pill(f"ID {str(analysis.analysis_id)[:8]}"),
+        ]
+    )
     hero = (
         "<div class='hero'>"
         f"{_brandrow(guideline_ctx, 'pressure-injury analysis')}"
@@ -568,26 +642,33 @@ def build_summary_report_html(
     figs = []
     for key, lab in (("photo", "Yüklenen görüntü · Photo"), ("overlay", "Doku · Tissue overlay")):
         if key in images:
-            figs.append(f"<figure><img src='{images[key]}'>"
-                        f"<figcaption>{escape(lab)}</figcaption></figure>")
+            figs.append(
+                f"<figure><img src='{images[key]}'><figcaption>{escape(lab)}</figcaption></figure>"
+            )
     left = f"<div class='figrow'>{''.join(figs)}</div>"
 
     area_v = f"{g.area_cm2:.2f}" if g.area_cm2 is not None else f"{g.area_px:.0f}"
     area_u = "cm²" if g.area_cm2 is not None else "px"
     gran = _fmt(hs.granulation_percent if hs else None, 0)
     push = str(hs.push_partial_total) if hs and hs.push_partial_total is not None else "—"
-    metrics = "".join([
-        _metric("Yüzey alanı · Area", f"~{area_v}", area_u),
-        _metric("Ölçü · Size", escape(s.standard_size).split(" · ")[0], ""),
-        _metric("Granülasyon", f"~{gran}", "%"),
-        _metric("PUSH", push, "/17"),
-    ])
-    right = (f"<div class='grid2 tight'>{metrics}</div>"
-             "<div class='mininote' style='margin-top:10px'>Doku canlılığı · Tissue viability</div>"
-             f"{_viability_bar(s)}")
+    metrics = "".join(
+        [
+            _metric("Yüzey alanı · Area", f"~{area_v}", area_u),
+            _metric("Ölçü · Size", escape(s.standard_size).split(" · ")[0], ""),
+            _metric("Granülasyon", f"~{gran}", "%"),
+            _metric("PUSH", push, "/17"),
+        ]
+    )
+    right = (
+        f"<div class='grid2 tight'>{metrics}</div>"
+        "<div class='mininote' style='margin-top:10px'>Doku canlılığı · Tissue viability</div>"
+        f"{_viability_bar(s)}"
+    )
     if s.under_detection:
-        right += ("<div class='mininote' style='margin-top:6px;color:#9b1c1c'>⚠ Slough/eskar saptanmadı — "
-                  "temiz yara olarak okumayın. · No slough/eschar detected — do not read as a clean wound.</div>")
+        right += (
+            "<div class='mininote' style='margin-top:6px;color:#9b1c1c'>⚠ Slough/eskar saptanmadı — "
+            "temiz yara olarak okumayın. · No slough/eschar detected — do not read as a clean wound.</div>"
+        )
     summary_card = _card(
         "Analiz özeti · Analysis summary",
         f"<div class='splitcol'><div>{left}</div><div>{right}</div></div>",
@@ -602,19 +683,27 @@ def build_summary_report_html(
             "Evre kriteri · Stage criterion",
             f"<div class='cite'><div class='q'>{escape(guideline_ctx.stage.text[:480])}</div>"
             f"{_cite_line(guideline_ctx.stage)}</div>"
-            + (f"<div class='mininote' style='margin-top:6px'><b>EN (NPIAP):</b> {escape(en)}</div>" if en else ""),
+            + (
+                f"<div class='mininote' style='margin-top:6px'><b>EN (NPIAP):</b> {escape(en)}</div>"
+                if en
+                else ""
+            ),
             cls="avoidbreak",
         )
 
-    body = (hero + _disclaimer_line() + summary_card + stage_card
-            + _footer(guideline_ctx, generated, provenance=_provenance(analysis), limitations=True))
+    body = (
+        hero
+        + _disclaimer_line()
+        + summary_card
+        + stage_card
+        + _footer(guideline_ctx, generated, provenance=_provenance(analysis), limitations=True)
+    )
     return _doc(css, body, "Sorbed · Tekli Görüntü Raporu")
 
 
 # --------------------------------------------------------------------------- #
 # Follow-up report
-def _per_visit_section(trend: HealingTrend,
-                       visit_images: Mapping[str, Mapping[str, str]]) -> str:
+def _per_visit_section(trend: HealingTrend, visit_images: Mapping[str, Mapping[str, str]]) -> str:
     """One card per visit: the photo + tissue overlay + that visit's analysis."""
     cards = []
     for p in trend.points:
@@ -626,21 +715,27 @@ def _per_visit_section(trend: HealingTrend,
         push = str(p.push_total) if p.push_total is not None else "—"
         thumbs = ""
         if imgs.get("photo"):
-            thumbs += (f"<figure><img src='{imgs['photo']}'>"
-                       "<figcaption>Fotoğraf · Photo</figcaption></figure>")
+            thumbs += (
+                f"<figure><img src='{imgs['photo']}'>"
+                "<figcaption>Fotoğraf · Photo</figcaption></figure>"
+            )
         if imgs.get("overlay"):
-            thumbs += (f"<figure><img src='{imgs['overlay']}'>"
-                       "<figcaption>Doku · Tissue</figcaption></figure>")
-        stats = "".join([
-            f"<div class='fi'><span>Evre · Stage</span>"
-            f"<span class='chip' style='background:{acc}'>"
-            f"{escape(_STAGE_SHORT.get(p.stage.value, p.stage.value))}</span></div>",
-            f"<div class='fi'><span>Alan · Area</span><b class='mono'>~{area} {trend.unit}</b></div>",
-            f"<div class='fi'><span>Granülasyon · Granulation</span><b class='mono'>~{gran:.0f}%</b></div>",
-            f"<div class='fi'><span>Nekroz · Necrosis</span><b class='mono'>~{nec:.0f}%</b></div>",
-            f"<div class='fi'><span>PUSH</span><b class='mono'>{push}/17</b></div>",
-            f"<div class='fi'><span>Güven · Confidence</span><b class='mono'>{round(p.confidence*100)}%</b></div>",
-        ])
+            thumbs += (
+                f"<figure><img src='{imgs['overlay']}'>"
+                "<figcaption>Doku · Tissue</figcaption></figure>"
+            )
+        stats = "".join(
+            [
+                f"<div class='fi'><span>Evre · Stage</span>"
+                f"<span class='chip' style='background:{acc}'>"
+                f"{escape(_STAGE_SHORT.get(p.stage.value, p.stage.value))}</span></div>",
+                f"<div class='fi'><span>Alan · Area</span><b class='mono'>~{area} {trend.unit}</b></div>",
+                f"<div class='fi'><span>Granülasyon · Granulation</span><b class='mono'>~{gran:.0f}%</b></div>",
+                f"<div class='fi'><span>Nekroz · Necrosis</span><b class='mono'>~{nec:.0f}%</b></div>",
+                f"<div class='fi'><span>PUSH</span><b class='mono'>{push}/17</b></div>",
+                f"<div class='fi'><span>Güven · Confidence</span><b class='mono'>{round(p.confidence * 100)}%</b></div>",
+            ]
+        )
         cards.append(
             "<div class='visitcard'>"
             f"<div class='vc-head'><b>{escape(p.label)}</b>"
@@ -688,9 +783,11 @@ def build_followup_report_html(
     )
 
     # Verdict banner + healing gauge side by side.
-    gauge = svg.gauge_svg(trend.percent_area_reduction, accent="#16A34A"
-                          if trend.percent_area_reduction >= 0 else "#DC2626",
-                          caption="alan azalması · PAR")
+    gauge = svg.gauge_svg(
+        trend.percent_area_reduction,
+        accent="#16A34A" if trend.percent_area_reduction >= 0 else "#DC2626",
+        caption="alan azalması · PAR",
+    )
     banner = (
         "<div class='verdictrow avoidbreak'>"
         f"<div class='banner' style='background:{bannercolor}'>"
@@ -702,31 +799,45 @@ def build_followup_report_html(
     )
 
     vband, vcolor = healing_velocity_band(trend)
-    likely = ("Evet · Yes" if trend.likely_to_heal
-              else "Hayır · No" if trend.likely_to_heal is False else "—")
-    tiles = "".join([
-        _metric("Baz→son alan · Base→latest",
-                f"{trend.baseline_area:.3g}→{trend.latest_area:.3g}", trend.unit),
-        _metric("Haftalık hız · Weekly rate", _fmt(trend.healing_rate_pct_per_week, 1), "%/hf"),
-        _metric("4-haftalık PAR · 4-wk PAR", _fmt(trend.par_at_4_weeks, 0), "%"),
-        _metric("PUSH eğilimi · trend", escape((trend.push_trend or "—").title())),
-        _metric("Kapanma · Closure (proj.)", _fmt(trend.projected_days_to_closure, 0), "gün"),
-        _metric("İyileşme olasılığı · Likely to heal", likely),
-    ])
+    likely = (
+        "Evet · Yes"
+        if trend.likely_to_heal
+        else "Hayır · No"
+        if trend.likely_to_heal is False
+        else "—"
+    )
+    tiles = "".join(
+        [
+            _metric(
+                "Baz→son alan · Base→latest",
+                f"{trend.baseline_area:.3g}→{trend.latest_area:.3g}",
+                trend.unit,
+            ),
+            _metric("Haftalık hız · Weekly rate", _fmt(trend.healing_rate_pct_per_week, 1), "%/hf"),
+            _metric("4-haftalık PAR · 4-wk PAR", _fmt(trend.par_at_4_weeks, 0), "%"),
+            _metric("PUSH eğilimi · trend", escape((trend.push_trend or "—").title())),
+            _metric("Kapanma · Closure (proj.)", _fmt(trend.projected_days_to_closure, 0), "gün"),
+            _metric("İyileşme olasılığı · Likely to heal", likely),
+        ]
+    )
     velocity = (
         f"<div class='metric' style='grid-column:1/-1;display:flex;align-items:center;"
         f"justify-content:space-between'><div><div class='k'>İyileşme hızı sınıfı · "
         f"Healing velocity</div><div class='v' style='color:{vcolor};font-size:15px'>{escape(vband)}</div></div>"
         f"<div class='mono muted' style='font-size:11px'>{_fmt(trend.healing_rate_pct_per_week, 1)} %/hafta</div></div>"
     )
-    tiles_card = _card("Özet · Summary",
-                       f"<div class='grid3 tight'>{tiles}</div>"
-                       f"<div class='grid tight' style='margin-top:8px'>{velocity}</div>")
+    tiles_card = _card(
+        "Özet · Summary",
+        f"<div class='grid3 tight'>{tiles}</div>"
+        f"<div class='grid tight' style='margin-top:8px'>{velocity}</div>",
+    )
 
     # SVG charts.
     days = [p.day for p in trend.points]
-    areas = [(p.area_cm2 if trend.unit == "cm2" and p.area_cm2 is not None else p.area_px)
-             for p in trend.points]
+    areas = [
+        (p.area_cm2 if trend.unit == "cm2" and p.area_cm2 is not None else p.area_px)
+        for p in trend.points
+    ]
     proj = None
     if trend.projected_days_to_closure is not None:
         proj = (days[-1] + trend.projected_days_to_closure, 0.0)
@@ -740,14 +851,18 @@ def build_followup_report_html(
         "<figcaption>Doku bileşimi · Tissue mix (%)</figcaption></figure>",
     ]
     if len(push_pts) >= 2:
-        push_svg = svg.line_chart_svg([x for x, _ in push_pts], [y for _, y in push_pts],
-                                      accent="#0E9C9B", unit="")
+        push_svg = svg.line_chart_svg(
+            [x for x, _ in push_pts], [y for _, y in push_pts], accent="#0E9C9B", unit=""
+        )
         charts_html.append(
             f"<figure class='chart'>{push_svg}<figcaption>PUSH toplamı · PUSH total "
             "(↓ = iyileşme)</figcaption></figure>"
         )
-    charts_card = _card("Eğilim grafikleri · Trend charts",
-                        f"<div class='chartgrid'>{''.join(charts_html)}</div>", cls="avoidbreak")
+    charts_card = _card(
+        "Eğilim grafikleri · Trend charts",
+        f"<div class='chartgrid'>{''.join(charts_html)}</div>",
+        cls="avoidbreak",
+    )
 
     # Alerts
     alert_rows = []
@@ -760,16 +875,18 @@ def build_followup_report_html(
             f"<div class='ad'>{escape(a.detail)}</div>"
             f"<div class='aref'>{escape(a.level.upper())}{escape(refs)}</div></div></div>"
         )
-    alerts_card = _card("Uyarılar · Clinical alerts",
-                        "".join(alert_rows) or "<p class='muted small'>Uyarı yok.</p>",
-                        cls="avoidbreak")
+    alerts_card = _card(
+        "Uyarılar · Clinical alerts",
+        "".join(alert_rows) or "<p class='muted small'>Uyarı yok.</p>",
+        cls="avoidbreak",
+    )
 
     # Visit timeline table
     rows = []
     for p in trend.points:
         acc = stage_theme(p.stage)[0]
         thumb = visit_thumbs.get(p.label, "")
-        img = (f"<img src='{thumb}' class='vthumb'>" if thumb else "")
+        img = f"<img src='{thumb}' class='vthumb'>" if thumb else ""
         area = f"{p.area_cm2:.2f}" if p.area_cm2 is not None else f"{p.area_px:.0f}"
         gran = p.fraction(TissueClass.GRANULATION) * 100
         nec = (p.fraction(TissueClass.SLOUGH) + p.fraction(TissueClass.ESCHAR)) * 100
@@ -793,9 +910,11 @@ def build_followup_report_html(
     directive_card = ""
     if guideline_ctx.available:
         blocks = []
-        for label, block in (("PUSH · §4.5.8", guideline_ctx.push),
-                             ("Doku rengi · §4.5.9", guideline_ctx.tissue_model),
-                             ("Boyut · §4.5.11", guideline_ctx.size)):
+        for label, block in (
+            ("PUSH · §4.5.8", guideline_ctx.push),
+            ("Doku rengi · §4.5.9", guideline_ctx.tissue_model),
+            ("Boyut · §4.5.11", guideline_ctx.size),
+        ):
             if block and block.text:
                 blocks.append(
                     f"<div class='cite col'><h3>{escape(label)}</h3>"
@@ -803,29 +922,48 @@ def build_followup_report_html(
                     f"{_cite_line(block)}</div>"
                 )
         if blocks:
-            directive_card = _card("Talimat dayanağı · Directive basis",
-                                   f"<div class='citegrid'>{''.join(blocks)}</div>", cls="avoidbreak")
+            directive_card = _card(
+                "Talimat dayanağı · Directive basis",
+                f"<div class='citegrid'>{''.join(blocks)}</div>",
+                cls="avoidbreak",
+            )
 
     per_visit = _per_visit_section(trend, visit_images or {})
-    body = (hero + banner + tiles_card + charts_card + alerts_card
-            + per_visit + visits_card + directive_card
-            + _footer(guideline_ctx, generated, attribution))
+    body = (
+        hero
+        + banner
+        + tiles_card
+        + charts_card
+        + alerts_card
+        + per_visit
+        + visits_card
+        + directive_card
+        + _footer(guideline_ctx, generated, attribution)
+    )
     return _doc(css, body, "Sorbed · İyileşme Takibi")
 
 
 def _provenance(analysis: WoundAnalysis) -> str:
     p = analysis.provenance
     digest = (analysis.config_digest or "")[:12]
-    parts = [f"seg={p.segmentation_backend}", f"tissue={p.tissue_backend}",
-             f"stage={p.staging_backend}"]
+    parts = [
+        f"seg={p.segmentation_backend}",
+        f"tissue={p.tissue_backend}",
+        f"stage={p.staging_backend}",
+    ]
     if digest:
         parts.append(f"config={digest}")
     parts.append(f"schema={analysis.schema_version}")
     return " · ".join(parts)
 
 
-def _footer(ctx: GuidelineContext, generated: str, attribution: str = "",
-            provenance: str = "", limitations: bool = False) -> str:
+def _footer(
+    ctx: GuidelineContext,
+    generated: str,
+    attribution: str = "",
+    provenance: str = "",
+    limitations: bool = False,
+) -> str:
     bits = [
         "Sorbed karar destek yazılımıdır; tıbbi cihaz veya tanı aracı değildir. Tüm çıktılar "
         "klinisyen doğrulaması gerektirir. · Sorbed is decision-support software, not a medical device "

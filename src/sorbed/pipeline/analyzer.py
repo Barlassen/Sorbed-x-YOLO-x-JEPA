@@ -104,8 +104,9 @@ class WoundAnalyzer:
             tissue = self._tissue.classify(analysis_pixels, seg.wound_mask)
 
         with _Timer(timings, "morphometrics"):
-            metrics = self._build_metrics(analysis_pixels, seg.wound_mask, tissue, calibration,
-                                          options.head_vector)
+            metrics = self._build_metrics(
+                analysis_pixels, seg.wound_mask, tissue, calibration, options.head_vector
+            )
 
         with _Timer(timings, "staging"):
             features = build_features(metrics, seg.confidence)
@@ -154,7 +155,7 @@ class WoundAnalyzer:
                 proxy = yolo_depth_proxy(pixels, wound_mask)
                 if proxy is not None:
                     return proxy
-            except Exception:  # noqa: BLE001 — never let the depth cue break analysis
+            except Exception:  # never let the depth cue break analysis
                 pass
         return shading_depth_proxy(pixels, wound_mask)
 

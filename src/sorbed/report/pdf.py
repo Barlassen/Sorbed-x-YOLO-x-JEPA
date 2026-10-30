@@ -55,9 +55,7 @@ def html_to_pdf(
 
     try:
         with sync_playwright() as pw:
-            browser = pw.chromium.launch(
-                args=["--no-sandbox"], executable_path=exe
-            )
+            browser = pw.chromium.launch(args=["--no-sandbox"], executable_path=exe)
             page = browser.new_page()
             page.set_content(html, wait_until="networkidle")
             page.emulate_media(media="print")

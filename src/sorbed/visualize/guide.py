@@ -88,10 +88,18 @@ def _draw_header(draw: ImageDraw.ImageDraw, analysis: WoundAnalysis, width: int)
     stage = d.stage.value.replace("_", " ").title()
     verb = "withheld" if d.abstained else f"{d.confidence * 100:.0f}% conf."
     draw.rectangle([0, 0, width, _HEADER_H], fill=(28, 28, 32))
-    draw.text((_PAD, 6), f"Provisional grade: {stage}  ({verb})", font=_font(18, True),
-              fill=(255, 255, 255))
-    draw.text((_PAD, 28), "Decision support — NOT a diagnosis. Clinician review required.",
-              font=_font(12), fill=(200, 170, 90))
+    draw.text(
+        (_PAD, 6),
+        f"Provisional grade: {stage}  ({verb})",
+        font=_font(18, True),
+        fill=(255, 255, 255),
+    )
+    draw.text(
+        (_PAD, 28),
+        "Decision support — NOT a diagnosis. Clinician review required.",
+        font=_font(12),
+        fill=(200, 170, 90),
+    )
 
 
 def _draw_contour(draw: ImageDraw.ImageDraw, wound_mask: np.ndarray) -> None:
@@ -145,9 +153,7 @@ def _draw_scalebar(
 
 def _present_tissues(analysis: WoundAnalysis) -> list[tuple[TissueClass, float]]:
     fr = analysis.metrics.tissue.fractions
-    items = [
-        (c, f) for c, f in fr.items() if f >= 0.02 and c is not TissueClass.BACKGROUND
-    ]
+    items = [(c, f) for c, f in fr.items() if f >= 0.02 and c is not TissueClass.BACKGROUND]
     return sorted(items, key=lambda kv: kv[1], reverse=True)
 
 

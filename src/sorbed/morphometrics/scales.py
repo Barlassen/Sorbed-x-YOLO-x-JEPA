@@ -13,8 +13,16 @@ from sorbed.domain.metrics import HealingScores, TissueComposition
 
 # PUSH 3.0 size sub-score: upper bound (cm^2, exclusive) -> score.
 _PUSH_SIZE_BANDS: tuple[tuple[float, int], ...] = (
-    (0.0, 0), (0.3, 1), (0.6, 2), (1.0, 3), (2.0, 4), (3.0, 5),
-    (4.0, 6), (8.0, 7), (12.0, 8), (24.0, 9),
+    (0.0, 0),
+    (0.3, 1),
+    (0.6, 2),
+    (1.0, 3),
+    (2.0, 4),
+    (3.0, 5),
+    (4.0, 6),
+    (8.0, 7),
+    (12.0, 8),
+    (24.0, 9),
 )
 _PUSH_SIZE_MAX = 10
 
@@ -28,7 +36,12 @@ _PUSH_TISSUE_SCORE: dict[TissueClass, int] = {
 
 # DESIGN-R(R)2020 size item: upper bound (cm^2, exclusive) -> score.
 _DESIGN_R_SIZE_BANDS: tuple[tuple[float, int], ...] = (
-    (0.0, 0), (4.0, 3), (16.0, 6), (36.0, 8), (64.0, 9), (100.0, 12),
+    (0.0, 0),
+    (4.0, 3),
+    (16.0, 6),
+    (36.0, 8),
+    (64.0, 9),
+    (100.0, 12),
 )
 _DESIGN_R_SIZE_MAX = 15
 

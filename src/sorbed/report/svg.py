@@ -95,36 +95,55 @@ def line_chart_svg(
     for i in range(5):
         yy = ymin + yspan * i / 4
         gy = py(yy)
-        parts.append(f"<line x1='{x0}' y1='{gy:.1f}' x2='{x1}' y2='{gy:.1f}' "
-                     f"stroke='{_GRID}' stroke-width='1'/>")
-        parts.append(f"<text x='{x0 - 7}' y='{gy + 3:.1f}' text-anchor='end' "
-                     f"font-size='8' fill='{_MUTED}'>{_fmt(yy)}</text>")
-    parts.append(f"<line x1='{x0}' y1='{y1}' x2='{x1}' y2='{y1}' stroke='{_AXIS}' stroke-width='1'/>")
+        parts.append(
+            f"<line x1='{x0}' y1='{gy:.1f}' x2='{x1}' y2='{gy:.1f}' "
+            f"stroke='{_GRID}' stroke-width='1'/>"
+        )
+        parts.append(
+            f"<text x='{x0 - 7}' y='{gy + 3:.1f}' text-anchor='end' "
+            f"font-size='8' fill='{_MUTED}'>{_fmt(yy)}</text>"
+        )
+    parts.append(
+        f"<line x1='{x0}' y1='{y1}' x2='{x1}' y2='{y1}' stroke='{_AXIS}' stroke-width='1'/>"
+    )
 
     pts = [(px(x), py(y)) for x, y in zip(xs, ys, strict=True)]
-    area_d = (f"M {pts[0][0]:.1f} {y1} " + " ".join(f"L {x:.1f} {y:.1f}" for x, y in pts)
-              + f" L {pts[-1][0]:.1f} {y1} Z")
+    area_d = (
+        f"M {pts[0][0]:.1f} {y1} "
+        + " ".join(f"L {x:.1f} {y:.1f}" for x, y in pts)
+        + f" L {pts[-1][0]:.1f} {y1} Z"
+    )
     line_d = "M " + " L ".join(f"{x:.1f} {y:.1f}" for x, y in pts)
     parts.append(f"<path d='{area_d}' fill='{accent}' opacity='0.10'/>")
-    parts.append(f"<path d='{line_d}' fill='none' stroke='{accent}' stroke-width='2.2' "
-                 "stroke-linejoin='round' stroke-linecap='round'/>")
+    parts.append(
+        f"<path d='{line_d}' fill='none' stroke='{accent}' stroke-width='2.2' "
+        "stroke-linejoin='round' stroke-linecap='round'/>"
+    )
 
     if projection:
         pxp, pyp = px(projection[0]), py(projection[1])
-        parts.append(f"<line x1='{pts[-1][0]:.1f}' y1='{pts[-1][1]:.1f}' x2='{pxp:.1f}' y2='{pyp:.1f}' "
-                     f"stroke='{accent}' stroke-width='1.6' stroke-dasharray='3 3' opacity='0.55'/>")
-        parts.append(f"<circle cx='{pxp:.1f}' cy='{pyp:.1f}' r='2.6' fill='none' "
-                     f"stroke='{accent}' stroke-width='1.4'/>")
+        parts.append(
+            f"<line x1='{pts[-1][0]:.1f}' y1='{pts[-1][1]:.1f}' x2='{pxp:.1f}' y2='{pyp:.1f}' "
+            f"stroke='{accent}' stroke-width='1.6' stroke-dasharray='3 3' opacity='0.55'/>"
+        )
+        parts.append(
+            f"<circle cx='{pxp:.1f}' cy='{pyp:.1f}' r='2.6' fill='none' "
+            f"stroke='{accent}' stroke-width='1.4'/>"
+        )
 
     # x tick labels only at first and last visit to avoid crowding.
     for i, (x, y) in enumerate(pts):
-        parts.append(f"<circle cx='{x:.1f}' cy='{y:.1f}' r='3.4' fill='{accent}' "
-                     "stroke='white' stroke-width='1.4'/>")
+        parts.append(
+            f"<circle cx='{x:.1f}' cy='{y:.1f}' r='3.4' fill='{accent}' "
+            "stroke='white' stroke-width='1.4'/>"
+        )
         if i in (0, len(pts) - 1):
             anc = "start" if i == 0 else "end"
             xx = x + (2 if i == 0 else -2)
-            parts.append(f"<text x='{xx:.1f}' y='{y1 + 15:.1f}' text-anchor='{anc}' "
-                         f"font-size='8' fill='{_MUTED}'>{_fmt(list(xs)[i])}</text>")
+            parts.append(
+                f"<text x='{xx:.1f}' y='{y1 + 15:.1f}' text-anchor='{anc}' "
+                f"font-size='8' fill='{_MUTED}'>{_fmt(list(xs)[i])}</text>"
+            )
 
     # Endpoint callout pinned to the top band — always clear of the plot.
     ex, ey = pts[-1]
@@ -133,14 +152,21 @@ def line_chart_svg(
     cx0 = min(ex - cw / 2, x1 - cw)
     cx0 = max(cx0, x0)
     cy0 = pad_t - 24
-    parts.append(f"<line x1='{ex:.1f}' y1='{ey:.1f}' x2='{cx0 + cw / 2:.1f}' y2='{cy0 + 17:.1f}' "
-                 f"stroke='{accent}' stroke-width='1' opacity='0.35'/>")
-    parts.append(f"<rect x='{cx0:.1f}' y='{cy0:.1f}' width='{cw:.1f}' height='17' rx='6' "
-                 f"fill='{accent}'/>")
-    parts.append(f"<text x='{cx0 + cw / 2:.1f}' y='{cy0 + 12:.1f}' text-anchor='middle' "
-                 f"font-size='9' font-weight='800' fill='#ffffff'>{label}</text>")
-    parts.append(f"<text x='{x1}' y='{height - 5}' text-anchor='end' font-size='7.5' "
-                 f"fill='{_MUTED}'>{x_label} →</text>")
+    parts.append(
+        f"<line x1='{ex:.1f}' y1='{ey:.1f}' x2='{cx0 + cw / 2:.1f}' y2='{cy0 + 17:.1f}' "
+        f"stroke='{accent}' stroke-width='1' opacity='0.35'/>"
+    )
+    parts.append(
+        f"<rect x='{cx0:.1f}' y='{cy0:.1f}' width='{cw:.1f}' height='17' rx='6' fill='{accent}'/>"
+    )
+    parts.append(
+        f"<text x='{cx0 + cw / 2:.1f}' y='{cy0 + 12:.1f}' text-anchor='middle' "
+        f"font-size='9' font-weight='800' fill='#ffffff'>{label}</text>"
+    )
+    parts.append(
+        f"<text x='{x1}' y='{height - 5}' text-anchor='end' font-size='7.5' "
+        f"fill='{_MUTED}'>{x_label} →</text>"
+    )
     return _svg(width, height, "".join(parts))
 
 
@@ -156,9 +182,13 @@ def tissue_stack_svg(trend: HealingTrend, *, width: int = 330, height: int = 190
     parts: list[str] = []
     for i in range(5):  # y grid 0..100
         gy = y1 - (y1 - y0) * i / 4
-        parts.append(f"<line x1='{x0}' y1='{gy:.1f}' x2='{x1}' y2='{gy:.1f}' stroke='{_GRID}' stroke-width='1'/>")
-        parts.append(f"<text x='{x0 - 5}' y='{gy + 3:.1f}' text-anchor='end' font-size='7.5' "
-                     f"fill='{_MUTED}'>{i * 25}</text>")
+        parts.append(
+            f"<line x1='{x0}' y1='{gy:.1f}' x2='{x1}' y2='{gy:.1f}' stroke='{_GRID}' stroke-width='1'/>"
+        )
+        parts.append(
+            f"<text x='{x0 - 5}' y='{gy + 3:.1f}' text-anchor='end' font-size='7.5' "
+            f"fill='{_MUTED}'>{i * 25}</text>"
+        )
     for idx, p in enumerate(trend.points):
         cx = x0 + slot * (idx + 0.5)
         top = y1
@@ -172,13 +202,19 @@ def tissue_stack_svg(trend: HealingTrend, *, width: int = 330, height: int = 190
                 f"fill='{_hex(TISSUE_COLORS[tc])}' stroke='white' stroke-width='1'/>"
             )
             top -= seg
-        parts.append(f"<text x='{cx:.1f}' y='{y1 + 13:.1f}' text-anchor='middle' font-size='8' "
-                     f"fill='{_MUTED}'>{p.label.replace('ziyaret', 'z.').replace('. ', '')}</text>")
+        parts.append(
+            f"<text x='{cx:.1f}' y='{y1 + 13:.1f}' text-anchor='middle' font-size='8' "
+            f"fill='{_MUTED}'>{p.label.replace('ziyaret', 'z.').replace('. ', '')}</text>"
+        )
     # legend
     lx, ly = x0, height - 12
     for tc in _TISSUE_ORDER:
-        parts.append(f"<rect x='{lx}' y='{ly - 6}' width='8' height='8' rx='2' fill='{_hex(TISSUE_COLORS[tc])}'/>")
-        parts.append(f"<text x='{lx + 11}' y='{ly + 1}' font-size='7.5' fill='{_INK}'>{_TISSUE_LABEL[tc]}</text>")
+        parts.append(
+            f"<rect x='{lx}' y='{ly - 6}' width='8' height='8' rx='2' fill='{_hex(TISSUE_COLORS[tc])}'/>"
+        )
+        parts.append(
+            f"<text x='{lx + 11}' y='{ly + 1}' font-size='7.5' fill='{_INK}'>{_TISSUE_LABEL[tc]}</text>"
+        )
         lx += 26 + len(_TISSUE_LABEL[tc]) * 4.3
     return _svg(width, height, "".join(parts))
 
@@ -186,7 +222,9 @@ def tissue_stack_svg(trend: HealingTrend, *, width: int = 330, height: int = 190
 # --------------------------------------------------------------------------- #
 # Semicircular healing gauge (percent area reduction)
 # --------------------------------------------------------------------------- #
-def gauge_svg(pct: float, *, accent: str, caption: str = "", width: int = 200, height: int = 128) -> str:
+def gauge_svg(
+    pct: float, *, accent: str, caption: str = "", width: int = 200, height: int = 128
+) -> str:
     import math
 
     cx, cy, r = width / 2, height - 22, 62
@@ -211,11 +249,15 @@ def gauge_svg(pct: float, *, accent: str, caption: str = "", width: int = 200, h
         f"<path d='M {sx:.1f} {sy:.1f} A {r} {r} 0 {large_v} 1 {vx:.1f} {vy:.1f}' "
         f"fill='none' stroke='{accent}' stroke-width='11' stroke-linecap='round'/>"
     )
-    parts.append(f"<text x='{cx:.1f}' y='{cy - 8:.1f}' text-anchor='middle' font-size='26' "
-                 f"font-weight='800' fill='{_INK}'>{pct:+.0f}%</text>")
+    parts.append(
+        f"<text x='{cx:.1f}' y='{cy - 8:.1f}' text-anchor='middle' font-size='26' "
+        f"font-weight='800' fill='{_INK}'>{pct:+.0f}%</text>"
+    )
     if caption:
-        parts.append(f"<text x='{cx:.1f}' y='{cy + 12:.1f}' text-anchor='middle' font-size='8.5' "
-                     f"fill='{_MUTED}'>{caption}</text>")
+        parts.append(
+            f"<text x='{cx:.1f}' y='{cy + 12:.1f}' text-anchor='middle' font-size='8.5' "
+            f"fill='{_MUTED}'>{caption}</text>"
+        )
     _ = (a0,)  # a0 retained for readability of the sweep definition
     return _svg(width, height, "".join(parts))
 
@@ -231,10 +273,18 @@ def hbars_svg(rows: Sequence[tuple[str, float, str]], *, width: int = 330, row_h
     for i, (label, val, color) in enumerate(rows):
         cy = pad_t + row_h * i + row_h / 2
         w = max(2.0, (x1 - x0) * max(0.0, min(1.0, val)))
-        parts.append(f"<text x='{pad_l - 8}' y='{cy + 3:.1f}' text-anchor='end' font-size='8.5' "
-                     f"fill='{_INK}'>{label}</text>")
-        parts.append(f"<rect x='{x0}' y='{cy - 6:.1f}' width='{x1 - x0}' height='12' rx='6' fill='{_GRID}'/>")
-        parts.append(f"<rect x='{x0}' y='{cy - 6:.1f}' width='{w:.1f}' height='12' rx='6' fill='{color}'/>")
-        parts.append(f"<text x='{x1 + 4}' y='{cy + 3:.1f}' font-size='8.5' font-weight='700' "
-                     f"fill='{_MUTED}'>{val * 100:.0f}%</text>")
+        parts.append(
+            f"<text x='{pad_l - 8}' y='{cy + 3:.1f}' text-anchor='end' font-size='8.5' "
+            f"fill='{_INK}'>{label}</text>"
+        )
+        parts.append(
+            f"<rect x='{x0}' y='{cy - 6:.1f}' width='{x1 - x0}' height='12' rx='6' fill='{_GRID}'/>"
+        )
+        parts.append(
+            f"<rect x='{x0}' y='{cy - 6:.1f}' width='{w:.1f}' height='12' rx='6' fill='{color}'/>"
+        )
+        parts.append(
+            f"<text x='{x1 + 4}' y='{cy + 3:.1f}' font-size='8.5' font-weight='700' "
+            f"fill='{_MUTED}'>{val * 100:.0f}%</text>"
+        )
     return _svg(width, height, "".join(parts))

@@ -63,9 +63,9 @@ def test_calibrate_threshold_bounds() -> None:
 
 def test_spans_defer_classes() -> None:
     defer = {3, 4, 5}
-    assert spans_defer_classes([2, 3], defer) is True     # spans a defer class
+    assert spans_defer_classes([2, 3], defer) is True  # spans a defer class
     assert spans_defer_classes([0, 1, 2], defer) is False  # ambiguous but shallow
-    assert spans_defer_classes([4], defer) is False        # singleton = confident
+    assert spans_defer_classes([4], defer) is False  # singleton = confident
 
 
 def test_json_roundtrip_to_runtime_gate(tmp_path) -> None:
@@ -74,8 +74,8 @@ def test_json_roundtrip_to_runtime_gate(tmp_path) -> None:
     probs, labels = _synthetic_probs(1500, 6, seed=2)
     names = ["evre1", "evre2", "evre3", "evre4", "unstageable", "dti"]
     calibrator = ConformalCalibrator.fit(
-        probs, labels, alpha=0.1, class_names=names,
-        defer_classes=["evre3", "evre4", "unstageable"])
+        probs, labels, alpha=0.1, class_names=names, defer_classes=["evre3", "evre4", "unstageable"]
+    )
     path = calibrator.to_json(tmp_path / "conformal.json")
 
     gate = ConformalStageGate.from_json(path)

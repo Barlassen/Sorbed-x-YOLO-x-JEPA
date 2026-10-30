@@ -35,21 +35,15 @@ def _build_tiny_onnx(path, in_h: int, in_w: int) -> None:
     is positive where the input is bright and negative where it is dark, so the
     downstream sigmoid+threshold produces a genuine, input-dependent mask.
     """
-    input_t = helper.make_tensor_value_info(
-        "input", TensorProto.FLOAT, [1, 3, in_h, in_w]
-    )
-    output_t = helper.make_tensor_value_info(
-        "logits", TensorProto.FLOAT, [1, 1, in_h, in_w]
-    )
+    input_t = helper.make_tensor_value_info("input", TensorProto.FLOAT, [1, 3, in_h, in_w])
+    output_t = helper.make_tensor_value_info("logits", TensorProto.FLOAT, [1, 1, in_h, in_w])
 
     half = helper.make_tensor("half", TensorProto.FLOAT, [1], [0.5])
     scale = helper.make_tensor("scale", TensorProto.FLOAT, [1], [8.0])
 
     nodes = [
         # Opset 17: ReduceMean takes `axes` as an attribute (channel axis = 1).
-        helper.make_node(
-            "ReduceMean", ["input"], ["chan_mean"], axes=[1], keepdims=1
-        ),
+        helper.make_node("ReduceMean", ["input"], ["chan_mean"], axes=[1], keepdims=1),
         helper.make_node("Sub", ["chan_mean", "half"], ["centered"]),
         helper.make_node("Mul", ["centered", "scale"], ["logits"]),
     ]
@@ -60,9 +54,7 @@ def _build_tiny_onnx(path, in_h: int, in_w: int) -> None:
         [output_t],
         initializer=[half, scale],
     )
-    model = helper.make_model(
-        graph, opset_imports=[helper.make_opsetid("", 17)]
-    )
+    model = helper.make_model(graph, opset_imports=[helper.make_opsetid("", 17)])
     onnx.checker.check_model(model)
     onnx.save(model, str(path))
 

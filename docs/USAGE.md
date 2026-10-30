@@ -222,9 +222,9 @@ bundle = analyze_image("wound.jpg", options=AnalyzeOptions(mm_per_px=0.15))
 analysis = bundle.analysis
 
 print(analysis.decision.stage, round(analysis.decision.confidence, 2))
-print(analysis.metrics.geometry.area_cm2)          # None if uncalibrated
+print(analysis.metrics.geometry.area_cm2)  # None if uncalibrated
 print(analysis.metrics.tissue.fractions)
-print(analysis.model_dump_json(indent=2))          # the canonical record
+print(analysis.model_dump_json(indent=2))  # the canonical record
 ```
 
 `AnalyzeOptions` accepts `mm_per_px`, `marker_length_mm`, `coin_diameter_mm`, and `head_vector` (a `(dy, dx)` direction toward the patient's head, used to orient length vs width). `analyze_image` returns an `AnalysisBundle` carrying the `analysis` plus the wound mask and tissue label map used to render artifacts.
@@ -234,7 +234,7 @@ To write the report artifacts yourself:
 ```python
 from sorbed.report.builder import write_report
 
-report = write_report(bundle, "reports")          # all artifacts by default
+report = write_report(bundle, "reports")  # all artifacts by default
 for artifact in report.artifacts:
     print(artifact.kind, artifact.path, artifact.bytes)
 ```

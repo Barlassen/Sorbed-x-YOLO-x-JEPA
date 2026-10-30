@@ -104,9 +104,7 @@ def _load_file_entries() -> list[ModelEntry]:
         entry = ModelEntry.model_validate(record)
         if entry.url is not None:
             if not entry.sha256:
-                raise ValueError(
-                    f"registry entry {entry.name!r} has a url but no sha256 digest"
-                )
+                raise ValueError(f"registry entry {entry.name!r} has a url but no sha256 digest")
             _suffix_of(entry.url)  # validate the format eagerly
         entries.append(entry)
     return entries

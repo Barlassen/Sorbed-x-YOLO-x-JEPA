@@ -33,8 +33,11 @@ _TRAJECTORY_COLOR = {
     "indeterminate": (150, 152, 158),
 }
 _TISSUE_ORDER = (
-    TissueClass.GRANULATION, TissueClass.SLOUGH, TissueClass.ESCHAR,
-    TissueClass.EPITHELIAL, TissueClass.INTACT_SKIN,
+    TissueClass.GRANULATION,
+    TissueClass.SLOUGH,
+    TissueClass.ESCHAR,
+    TissueClass.EPITHELIAL,
+    TissueClass.INTACT_SKIN,
 )
 _MARGIN = 32
 _THUMB = 150
@@ -84,8 +87,12 @@ def _header(draw: ImageDraw.ImageDraw, trend: HealingTrend, width: int) -> None:
     label = trend.trajectory.title()
     _pill(draw, label, color, width - _MARGIN, 24)
     par = f"{trend.percent_area_reduction:+.0f}% area"
-    draw.text((width - _MARGIN - _tw(draw, par, font(12, "Medium")), 60), par,
-              font=font(12, "Medium"), fill=_MUTED)
+    draw.text(
+        (width - _MARGIN - _tw(draw, par, font(12, "Medium")), 60),
+        par,
+        font=font(12, "Medium"),
+        fill=_MUTED,
+    )
     draw.line([(_MARGIN, 88), (width - _MARGIN, 88)], fill=_HAIR, width=1)
 
 
@@ -102,18 +109,25 @@ def _pill(draw: ImageDraw.ImageDraw, text: str, color, right: int, top: int) -> 
 
 
 def _thumbnails(
-    canvas: Image.Image, draw: ImageDraw.ImageDraw, trend: HealingTrend,
-    thumbs: list[Image.Image], y: int,
+    canvas: Image.Image,
+    draw: ImageDraw.ImageDraw,
+    trend: HealingTrend,
+    thumbs: list[Image.Image],
+    y: int,
 ) -> None:
     for i, p in enumerate(trend.points):
         x = _MARGIN + i * (_THUMB + 16)
         if i < len(thumbs):
             canvas.paste(_fit(thumbs[i], _THUMB), (x, y))
         draw.rectangle([x, y, x + _THUMB - 1, y + _THUMB - 1], outline=_HAIR, width=1)
-        size = (f"{p.area_cm2:.1f} cm²" if p.area_cm2 is not None else f"{p.area_px:.0f} px")
+        size = f"{p.area_cm2:.1f} cm²" if p.area_cm2 is not None else f"{p.area_px:.0f} px"
         draw.text((x + 1, y + _THUMB + 6), p.label, font=font(12, "SemiBold"), fill=_INK)
-        draw.text((x + 1, y + _THUMB + 23), f"{p.stage.value.replace('_', ' ')} · {size}",
-                  font=font(11), fill=_MUTED)
+        draw.text(
+            (x + 1, y + _THUMB + 23),
+            f"{p.stage.value.replace('_', ' ')} · {size}",
+            font=font(11),
+            fill=_MUTED,
+        )
 
 
 def _area_chart(trend: HealingTrend, size: tuple[int, int]) -> Image.Image:
@@ -149,8 +163,11 @@ def _stats(draw: ImageDraw.ImageDraw, trend: HealingTrend, x0: int, y0: int, wid
     par4_txt = "—" if par4 is None else f"{par4:.0f}%"
     if trend.likely_to_heal is not None:
         par4_txt += "  ·  " + ("on track" if trend.likely_to_heal else "below 40%")
-    closure = ("—" if trend.projected_days_to_closure is None
-               else f"~{trend.projected_days_to_closure:.0f} days")
+    closure = (
+        "—"
+        if trend.projected_days_to_closure is None
+        else f"~{trend.projected_days_to_closure:.0f} days"
+    )
 
     cards = [
         ("ruler", "Area reduction", f"{trend.percent_area_reduction:+.0f}%"),
@@ -163,8 +180,9 @@ def _stats(draw: ImageDraw.ImageDraw, trend: HealingTrend, x0: int, y0: int, wid
     cw = (width - _MARGIN * 2 - gap * (len(cards) - 1)) // len(cards)
     for i, (icon, label, value) in enumerate(cards):
         cx = x0 + i * (cw + gap)
-        draw.rounded_rectangle([cx, y0, cx + cw, y0 + 74], radius=12, fill=(255, 255, 255),
-                               outline=_HAIR, width=1)
+        draw.rounded_rectangle(
+            [cx, y0, cx + cw, y0 + 74], radius=12, fill=(255, 255, 255), outline=_HAIR, width=1
+        )
         draw_icon(draw, icon, cx + 16, y0 + 15, 15, _FAINT, width=2)
         draw.text((cx + 38, y0 + 16), label, font=font(11, "Medium"), fill=_MUTED)
         draw.text((cx + 16, y0 + 38), value, font=font(18, "Bold"), fill=_INK)

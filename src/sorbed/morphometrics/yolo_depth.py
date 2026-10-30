@@ -46,15 +46,11 @@ def _predict_depth(rgb: np.ndarray, model_id: str) -> np.ndarray:
     ``rgb`` is float32 [0, 1] (H, W, 3). Ultralytics wants an 8-bit BGR array.
     """
     model = _load_model(model_id)
-    bgr = cv2.cvtColor(
-        (np.clip(rgb, 0.0, 1.0) * 255.0).astype(np.uint8), cv2.COLOR_RGB2BGR
-    )
+    bgr = cv2.cvtColor((np.clip(rgb, 0.0, 1.0) * 255.0).astype(np.uint8), cv2.COLOR_RGB2BGR)
     result = model.predict(bgr, verbose=False)[0]
     depth = result.depth.data.cpu().numpy().astype(np.float32)
     if depth.shape != rgb.shape[:2]:
-        depth = cv2.resize(
-            depth, (rgb.shape[1], rgb.shape[0]), interpolation=cv2.INTER_LINEAR
-        )
+        depth = cv2.resize(depth, (rgb.shape[1], rgb.shape[0]), interpolation=cv2.INTER_LINEAR)
     return depth
 
 

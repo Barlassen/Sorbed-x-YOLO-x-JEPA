@@ -60,13 +60,13 @@ class GradingStats(BaseModel):
     viability: ViabilitySplit
     tissue_areas: tuple[TissueArea, ...]
     granulation_slough_ratio: float | None  # None => slough not detected, not meaningful
-    bed_descriptor: str                     # qualitative, bilingual
+    bed_descriptor: str  # qualitative, bilingual
     bed_descriptor_color: str
-    under_detection: bool                   # slough/eschar likely under-detected
-    standard_size: str                      # "L × W · area"
-    necrotic_level: str                     # "none" | "caution" | "high"
+    under_detection: bool  # slough/eschar likely under-detected
+    standard_size: str  # "L × W · area"
+    necrotic_level: str  # "none" | "caution" | "high"
     necrotic_detail: str
-    intact_skin_pct: float                  # peri-wound / margin, whole-frame
+    intact_skin_pct: float  # peri-wound / margin, whole-frame
 
 
 def _bed_fractions(analysis: WoundAnalysis) -> dict[TissueClass, float]:
@@ -74,8 +74,10 @@ def _bed_fractions(analysis: WoundAnalysis) -> dict[TissueClass, float]:
     bed = 1.0 - fr.get(TissueClass.INTACT_SKIN, 0.0) - fr.get(TissueClass.BACKGROUND, 0.0)
     if bed <= _EPS:
         return dict.fromkeys(fr, 0.0)
-    return {k: (v / bed if k not in (TissueClass.INTACT_SKIN, TissueClass.BACKGROUND) else 0.0)
-            for k, v in fr.items()}
+    return {
+        k: (v / bed if k not in (TissueClass.INTACT_SKIN, TissueClass.BACKGROUND) else 0.0)
+        for k, v in fr.items()
+    }
 
 
 def viability_split(analysis: WoundAnalysis) -> ViabilitySplit:
@@ -85,9 +87,12 @@ def viability_split(analysis: WoundAnalysis) -> ViabilitySplit:
     slough = b.get(TissueClass.SLOUGH, 0.0)
     eschar = b.get(TissueClass.ESCHAR, 0.0)
     return ViabilitySplit(
-        viable_pct=round((gran + epi) * 100, 1), non_viable_pct=round((slough + eschar) * 100, 1),
-        granulation_pct=round(gran * 100, 1), epithelial_pct=round(epi * 100, 1),
-        slough_pct=round(slough * 100, 1), eschar_pct=round(eschar * 100, 1),
+        viable_pct=round((gran + epi) * 100, 1),
+        non_viable_pct=round((slough + eschar) * 100, 1),
+        granulation_pct=round(gran * 100, 1),
+        epithelial_pct=round(epi * 100, 1),
+        slough_pct=round(slough * 100, 1),
+        eschar_pct=round(eschar * 100, 1),
     )
 
 
@@ -96,8 +101,13 @@ def tissue_areas_cm2(analysis: WoundAnalysis) -> tuple[TissueArea, ...]:
     areas_mm2 = analysis.metrics.tissue.areas_mm2 or {}
     total_cm2 = analysis.metrics.geometry.area_cm2
     out: list[TissueArea] = []
-    for tc in (TissueClass.GRANULATION, TissueClass.EPITHELIAL, TissueClass.SLOUGH,
-               TissueClass.ESCHAR, TissueClass.ADIPOSE):
+    for tc in (
+        TissueClass.GRANULATION,
+        TissueClass.EPITHELIAL,
+        TissueClass.SLOUGH,
+        TissueClass.ESCHAR,
+        TissueClass.ADIPOSE,
+    ):
         f = fr.get(tc, 0.0)
         if f <= 0.004:
             continue
@@ -159,11 +169,15 @@ def grading_stats(analysis: WoundAnalysis) -> GradingStats:
         viability=viability_split(analysis),
         tissue_areas=tissue_areas_cm2(analysis),
         granulation_slough_ratio=_ratio(analysis),
-        bed_descriptor=desc, bed_descriptor_color=color,
+        bed_descriptor=desc,
+        bed_descriptor_color=color,
         under_detection=_under_detection(analysis),
-        standard_size=size, necrotic_level=level, necrotic_detail=detail,
+        standard_size=size,
+        necrotic_level=level,
+        necrotic_detail=detail,
         intact_skin_pct=round(
-            analysis.metrics.tissue.fractions.get(TissueClass.INTACT_SKIN, 0.0) * 100, 1),
+            analysis.metrics.tissue.fractions.get(TissueClass.INTACT_SKIN, 0.0) * 100, 1
+        ),
     )
 
 

@@ -19,8 +19,16 @@ from sorbed.visualize.guide import render_guide, render_schematic_guide
 from sorbed.visualize.overlay import render_mask, render_schematic, render_tissue_overlay
 
 DEFAULT_ARTIFACTS = (
-    "json", "mask", "overlay", "detection", "depth", "guide", "schematic",
-    "schematic_guide", "dashboard", "html",
+    "json",
+    "mask",
+    "overlay",
+    "detection",
+    "depth",
+    "guide",
+    "schematic",
+    "schematic_guide",
+    "dashboard",
+    "html",
 )
 
 
@@ -76,12 +84,12 @@ def write_report(
         written.append(_write_png(schematic, out / f"{stem}_schematic.png", "schematic_png"))
 
     if "schematic_guide" in artifacts:
-        sguide = render_schematic_guide(
-            bundle.analysis, bundle.wound_mask, bundle.tissue_label_map
-        )
+        sguide = render_schematic_guide(bundle.analysis, bundle.wound_mask, bundle.tissue_label_map)
         written.append(
             _write_artifact(
-                out / f"{stem}_schematic_guide.png", _png_bytes(sguide), "schematic_guide_png",
+                out / f"{stem}_schematic_guide.png",
+                _png_bytes(sguide),
+                "schematic_guide_png",
                 "image/png",
             )
         )
@@ -96,9 +104,7 @@ def write_report(
 
     if "html" in artifacts:
         payload = build_html(analysis, guide_png).encode("utf-8")
-        written.append(
-            _write_artifact(out / f"{stem}.html", payload, "html", "text/html")
-        )
+        written.append(_write_artifact(out / f"{stem}.html", payload, "html", "text/html"))
 
     return Report(analysis=analysis, artifacts=written)
 

@@ -56,9 +56,7 @@ def _sha256_file(path: Path) -> str:
 def _parse_triple(value: str) -> tuple[float, float, float]:
     parts = [p.strip() for p in value.split(",") if p.strip()]
     if len(parts) != 3:
-        raise RuntimeError(
-            f"expected three comma-separated numbers, got {value!r}"
-        )
+        raise RuntimeError(f"expected three comma-separated numbers, got {value!r}")
     a, b, c = (float(p) for p in parts)
     return a, b, c
 
@@ -106,9 +104,7 @@ class OnnxSegmenter:
         self._min_area_fraction = float(min_area_fraction)
         self._weights_sha256 = _sha256_file(self._model_path)
 
-        self._session = ort.InferenceSession(
-            str(self._model_path), providers=_select_providers()
-        )
+        self._session = ort.InferenceSession(str(self._model_path), providers=_select_providers())
         self._input_name = self._session.get_inputs()[0].name
         self._output_name = self._session.get_outputs()[0].name
         self._input_hw = self._resolve_input_hw()
@@ -132,12 +128,12 @@ class OnnxSegmenter:
 
         mean = _IMAGENET_MEAN
         std = _IMAGENET_STD
-        if (raw_mean := os.environ.get(_ENV_MEAN, "").strip()):
+        if raw_mean := os.environ.get(_ENV_MEAN, "").strip():
             mean = _parse_triple(raw_mean)
-        if (raw_std := os.environ.get(_ENV_STD, "").strip()):
+        if raw_std := os.environ.get(_ENV_STD, "").strip():
             std = _parse_triple(raw_std)
         default_input = _DEFAULT_INPUT
-        if (raw_input := os.environ.get(_ENV_INPUT, "").strip()):
+        if raw_input := os.environ.get(_ENV_INPUT, "").strip():
             default_input = int(raw_input)
 
         return cls(
@@ -174,9 +170,9 @@ class OnnxSegmenter:
         prob_model = self._probabilities(np.asarray(outputs[0], dtype=np.float32))
 
         # Wound probability at the original resolution.
-        prob = cv2.resize(
-            prob_model, (orig_w, orig_h), interpolation=cv2.INTER_LINEAR
-        ).astype(np.float32)
+        prob = cv2.resize(prob_model, (orig_w, orig_h), interpolation=cv2.INTER_LINEAR).astype(
+            np.float32
+        )
 
         valid = self._valid_mask(image)
         mask = (prob >= 0.5) & valid
