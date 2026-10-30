@@ -26,7 +26,7 @@
   uyuşmasını güven puanı yapmak → sonra SAM (indirme onayı) → hemşire onaylı maske (Ario ile). Maskeden sonra A+B
   hibriti (Evre 4 için).
 
-**Git:** `claude/sorbed-details-heuk41`; son push 463a6aa, sonrası push edilmedi.
+**Git:** `claude/sorbed-details-heuk41`; 2026-10-30 itibarıyla GitHub güncel (main + bu dal). Kayıtlarda Claude yazar/ortak yazar olarak yer almıyor (kullanıcı isteği; geçmiş yeniden yazıldı, eski kayıt numaraları geçersiz).
 
 ### Önceki durum (2026-10-02, tarihsel)
 
@@ -511,7 +511,7 @@ Labeled/Test` **16** · evre `fr7kn/test` (temiz ~189) · tip `ambatron/test` 23
 train↔val 10; azh_fuseg↔DFUTissue Labeled 7. Havuzlar: `data/pool_foot` 1158, `data/pool_pressure` 3137,
 `data/pool_all` 4989 (hepsi cetvellere karşı dHash ile süzülü, hamming 2).
 
-**Segmenter** (commit f7c4a22): yeni araçlar `prepare_co2wounds_seg`, `merge_yolo_seg`,
+**Segmenter** (commit 74794ae): yeni araçlar `prepare_co2wounds_seg`, `merge_yolo_seg`,
 `prepare_complexwound_ruler`, `augment_tight_crops`. Birleşik set `data/yolo_seg_combined` (1326 +
 2541 yakın-kırpma = 3867 train / 136 val). yolo26n-seg 50 epoch → `runs/segment/runs/segment/combined_v1/weights/best.pt`
 (val mask mAP50 0.723, epoch 41).
@@ -678,7 +678,7 @@ boyutundan çok ALAN UYUMU belirleyici. Sorbed bası sistemi ama JEPA hep ayak p
 = yanlış cetvel. **Asıl kaldıraç: bası yarası için etiketli değerlendirme seti (İş Kolu B).**
 Eski checkpoint'ler + rgbd_pool DOKUNULMADI. Plan artefaktı:
 https://claude.ai/code/artifact/ce283b86-225e-4df5-9f29-83b87646c433
-build_pool.py + testi COMMIT edildi (9bc218c). tissue_validation_v2.json henüz commit'lenmedi.
+build_pool.py + testi COMMIT edildi (d8648c5). tissue_validation_v2.json henüz commit'lenmedi.
 
 ## SON DEVAM (2026-09-08) — ayrı yüzey sınıfları, anotasyon v2
 
