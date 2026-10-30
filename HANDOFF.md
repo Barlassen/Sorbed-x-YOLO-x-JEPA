@@ -1,11 +1,36 @@
 # Devir Teslim — Sorbed × YOLO × JEPA
 
 > Yeni bir sohbette / oturumda kaldığımız yerden devam etmek için özet.
-> Son güncelleme: 2026-10-02.
+> Son güncelleme: 2026-10-29.
 
-## 🧭 BURADAN DEVAM (2026-10-02) — kısa durum ve açık kararlar
+## 🧭 BURADAN DEVAM (2026-10-29) — kısa durum
 
-**Zincir:** maske ✅ (bası Dice 0.865 ≈ insan 0.862) → doku 🟡 → evre 🟡.
+**Zincir:** maske 🔴 (bası yakın çekimi) → doku 🟡 → evre 🟡. Ürün hattı bağlı ama isteğe bağlı: README'deki 7
+`SORBED_*` satırıyla açılıyor; varsayılan hâlâ classical + color_model.
+- **Maske:** CWDB'de iyi (old-first 0.865 ≈ insan 0.862), bası yakın çekiminde zayıf (petchs açık yüzey 0.35).
+  DeepLab-v4 bası fotoğrafında ~2× (kaynağı eğitimde olmayan 11'de 0.51 → 0.78) ama CWDB'de 0.78 (yara kenarındaki
+  pembe epitel halkasını da boyuyor) → ön-kayıtlı ölçüt tutmadı, üretim old-first. DeepLab-v4 petchs train gördü →
+  166 kaynaklı evreleme setinde kullanmak için kaynak-katlı yeniden eğitim gerekir.
+- **Evre** (166 kaynak, kaynak-katlı CV, 4-sınıf dengeli doğruluk; taban "hep Evre 3" 0.25): A (düzeltilmiş kurallar)
+  0.41, ürünün eritem eşiğiyle 0.34; GT bölgeyle bile 0.45; B (doğrudan evre CNN'i) 0.49, A ile fark anlamlı değil.
+  Kurallar Evre 4 veremez (166'nın 36'sı), B 22/36'sını buluyor.
+- **Ürünün gerçek çıktısı:** güvenlik kapılarıyla 166'nın 141'i belirsiz, 20 U, 5 Evre 3 → gösterilen evrenin dengeli
+  doğruluğu ~0.05 (örneklem-içi). Kapı çoğunlukla haklı: 57 görüntüde maske yarayı ıskalıyor (Dice medyan 0.02).
+- **İki darboğaz:** (1) kapsam = maske (kaç fotoğrafa evre verilebildiği); (2) doğruluk tavanı = kural ağacı (Evre 4
+  yolu yok; mükemmel maskeyle bile ~0.45).
+- **Yöntem uyarıları:** CWDB 27 ve petchs-test 26 dört kez "final" olarak kullanıldı (yıprandı, bağımsız test gerekli);
+  petchs Roboflow kopya sızıntısı → yalnız `training/petchs_groups.py` katları; tek etiketleyici; pytest/hypothesis
+  kurulu değil (testler yerel bir yedek çalıştırıcıyla koşuldu).
+- **Sıradaki (öneri, kullanıcı onayı bekliyor):** DeepLab'i kaynak-katlı yeniden eğit → indirme gerektirmeyen maske
+  fikirleri ön-kayıtla: doku CNN'inin epitel dediği kenarı kesmek, GrabCut ile kenarı renk sınırına oturtmak, iki modelin
+  uyuşmasını güven puanı yapmak → sonra SAM (indirme onayı) → hemşire onaylı maske (Ario ile). Maskeden sonra A+B
+  hibriti (Evre 4 için).
+
+**Git:** `claude/sorbed-details-heuk41`; son push 463a6aa, sonrası push edilmedi.
+
+### Önceki durum (2026-10-02, tarihsel)
+
+**Zincir (o tarihte):** maske ✅ (CWDB Dice 0.865 ≈ insan 0.862; bası yakın çekim sorunu sonradan bulundu) → doku 🟡 → evre 🟡.
 **Derinlik kolu kapandı** (tek fotoğraftan derinlik + WoundsDB fine-tune negatif; Evre 3↔4 için hemşire girişi
 ya da çekim anında gerçek sensör). **Doku:** CWDB 27×4 cetvelinde (G / S / N):
 renk yöntemi A 0.71 / 0.46 / **0.70**; çok kaynaklı CNN (DFUTissue + LUTSeg + WoundTissue 14) 0.63 / **0.57** / 0.30;
@@ -24,6 +49,55 @@ yama × 192 boyut, 6 katman, 5 kanal). Dizüstü ölçeğinde rastgele başlang�
 
 **Git:** `claude/sorbed-details-heuk41`. Staj raporları (`STAJ_RAPORU_*.md/.docx`) bilerek git dışında
 (`.git/info/exclude`); `.claude/settings.json` kişisel, commit edilmez.
+
+## ÖN-KAYIT — katmanlı yara haritası v1 + kaynak-katlı DeepLab (2026-10-30, sonuçtan önce)
+**Fikir** (kullanıcı; Ario'nun sıralı katmanlarıyla aynı): yara tek maske değil, eş yükselti eğrileri gibi iç içe
+katmanlar. v1 yeni etiket istemez, iki mevcut modelden kurulur:
+- **D (dış çizgi)** = DeepLab maskesi (eşik 0.5): açık yüzey + iyileşen kenar.
+- **E (iyileşen kenar)** = D ∩ doku CNN'i "O" (epitel/diğer).
+- **A (açık yara)** = D ∩ doku CNN'i {G, S, N}; içinde doku tipleri.
+Doku CNN'i üründeki yolla uygulanır (`crop_resize` → `predict` → `paste`). En dış "kapalı, rengi değişmiş deri"
+katmanı v1'de YOK: etiketi yalnız petchs Evre 1'de var (24 görüntü / 13 kaynak) → v2, uzman/hemşire etiketiyle.
+**Etiket bulgusu (model çıktısı görülmeden):** petchs'te "evre çizgisi − doku poligonları" kapalı deri DEĞİL: Evre
+2'nin %86'sında doku poligonu yok (açık ama doku çizilmemiş), Evre 3'te doku poligonları çizginin medyanda %31'ini
+dolduruyor → petchs'ten kapalı-deri katmanı etiketi türetilemez.
+**DeepLab kat modelleri** (`data/yolo_seg_v5_fold{k}` → `runs/wound_deeplab/fold{k}.pt`, k = 0, 1, 2):
+- Tarif v4'ün aynısı: aynı kod, 25 epoch, AdamW 3e-4 OneCycle, CE + Dice, kırpma 0.45–1, seed 0, eşik 0.5.
+- Tek fark petchs kısmı: üç bölümün tümü (train/valid/test), doku poligonu bölgesiyle (v4'le aynı "açık yüzey"
+  tanımı; dokusuz görüntüler atlanır). k katının kaynakları tamamen dışarıda.
+- Epoch seçimi: kalan kaynakların her 6.'sı (doku CNN'i katlarıyla aynı `kept[5::6]` listesi) + Figshare 20
+  (v4 doğrulamasıyla aynı).
+- Diğer kaynaklar (FUSeg 300, CO2 300, DFUT 80, segulcer 195) v4'teki dosyaların aynısı. Yakın-kırpmalar
+  (1 kopya, seed 0) yeniden üretilir.
+- Sızıntı kontrolü: dışarıda tutulan kat ↔ eğitim görüntüleri, dönüş ve çevirme dahil dHash (≤ 6); eşleşen eğitim
+  görüntüsü atılır. Kırpılmış kopyaları dHash yakalamaz (sınırlama).
+**Değerlendirme** (birim: petchs kaynak başına 1 görüntü, n = 166; her görüntü kendi katının DeepLab'i ve doku
+CNN'iyle; `training/eval_layered_map.py`):
+- **M1 (birincil, maske):** açık yüzey Dice. GT = petchs doku poligonları; dokusuz kaynaklar hariç. Karşılaştırma:
+  old-first, D ve A. Ayrıca ıskalama oranı (Dice < 0.1). Kaynak üzerinden eşli bootstrap, %95 GA.
+- **M2 (ikincil, yıpranmış cetvel):** CWDB 27 konsensüs Dice. old-first (0.865), DeepLab-v4 D (0.782), v4 ×
+  `tissue_cnn_final` A. Hiçbiri CWDB görmedi.
+- **M3 (evre, ürün; karar vermez):** adım-2 A kural motoru, ürün eşikleriyle (eritem 0.15). Bölge = D; doku
+  oranları D içinde, ürünle aynı.
+  - Kapısız: 4-sınıf dengeli doğruluk.
+  - Kapılı: seg güveni = D içindeki ortalama ön-plan olasılığı. Bu tanımla 0.2 kapısı pratikte yalnız boş maskede
+    tetiklenir; bunu bilerek ölçüyoruz. Güvenin anlamlılığı (maske Dice'ıyla Spearman) raporlanır; bu adımda eşik
+    ayarı YOK.
+  - Raporlanan: belirsiz sayısı ve gösterilen evrenin dengeli doğruluğu. old-first ile karşılaştırılır (141
+    belirsiz, ~0.05).
+**Karar kuralı (maske):** üretim maskesi old-first → katmanlı DeepLab ⇔ M1'de A − old-first > 0 ve GA 0'ı içermiyor
+VE M2'de A ≥ 0.835 (old-first'ten en fazla 0.03 düşük; yıpranmış cetvel, yalnız koruma). Ürün için DeepLab aynı
+tarifle tüm petchs kaynaklarıyla yeniden eğitilir.
+**Sınırlamalar:** tek etiketleyici; petchs doku poligonları açık yüzeyin bir kısmını çiziyor (Dice, çizilmemiş açık
+tabanı boyayan maskeyi cezalandırır); CWDB 5. kez kullanılıyor.
+**SONUÇ M2 (CWDB 27; `python -m training.eval_layered_map --cwdb --viz` → `runs/layered/m2_cwdb.json`):** old-first
+0.865, D 0.782 (iki sayı da eskiyle aynı), **A 0.827**. A − D = +0.045 [0.013, 0.087] → pembe kenarı ayrı katman
+yapmak anlamlı iyileşme. A − old-first = −0.038 [−0.075, −0.002]. Koruma eşiği 0.835 TUTMADI (az farkla) → karar
+kuralına göre ürün maskesi bu turda değişmez, M1 ne çıkarsa çıksın. Gerçek taşmalar düzeldi: #3 0.33 → 0.79,
+#18 0.69 → 0.84. Kullanıcının örneği #9 0.38 → 0.60; D'nin %71'i pembe katman. En büyük kayıp #26 (0.94 → 0.84): CNN
+eskarın bir kısmını "O" dedi. Görseller `runs/audit/layered/` (hasta fotoğrafı, yerel).
+DeepLab kat eğitimleri 2026-10-30 17:54'te başladı (sırayla, epoch başına ~4–5 dk → ~5.5 sa); log
+`logs/wound_deeplab_fold{k}.log`. Bitince: `python -m training.eval_layered_map --petchs` (M1 + M3).
 
 ## 🔌 ÜRÜNE BAĞLAMA (2026-10-28) — YOLO old-first maske + CNN doku arka ucu
 
@@ -187,6 +261,11 @@ Keşif (sonuçtan sonra bakıldı; `runs/audit/mask_v4_cwdb_misses.png`): CWDB k
 YOLO'da +#20). Yeni modeller kaçırmıyor (kapsama 1.00), **taşıyor**: uzmanlar yalnız çiğ açık yüzeyi dar çiziyor
 (#9'da ayrı adacıklar), modeller yara kenarındaki pembe epitel/maserasyon halkasını da dahil ediyor. Yani kalan
 fark çoğunlukla "yara sınırı nereden geçer" tanımı; eğitim etiketleri (petchs doku, segulcer, FUSeg) CWDB'den gevşek.
+Keşif 2 (2026-10-29, sonuçtan sonra, kanıt değil; tek tek görüntüler `runs/audit/cwdb_masks/index.html`): kayıpların
+çoğunda uzmanlar da anlaşamıyor. #7 uzman çifti Dice ort. 0.28 (2 uzman büyük kırmızı alanı çizmiş, 2'si küçük bir nokta;
+3/4 konsensüs noktayı tutuyor; DeepLab uzman 4'e 0.86), #9 0.48 (DeepLab uzman 3'e 0.77), #27 0.54 (DeepLab uzman 1'e
+0.69). Uzmanların anlaştığı #3 ve #18'de DeepLab gerçekten taşıyor (#18 alanı 1.9×, pembe halka). İleride ölçüt
+olarak "konsensüs" yerine ör. "en yakın uzman" ya da görüntü başına insan tavanı düşünülebilir; ancak önceden kayda yazılarak.
 
 ## 🔎 MASKE HATTI TEŞHİS RAPORU (2026-10-20)
 1. **Eğitim neden "öğrenmeden" duruyor:** optimizer=auto → AdamW lr0 0.002 (v1'in en iyi epoch'undaki lr 0.0004'ün
